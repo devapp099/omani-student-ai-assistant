@@ -19,7 +19,7 @@ class MetadataAuditTests(unittest.TestCase):
         report = audit(self.db)
         self.assertEqual(report["books_checked"], 5)
         self.assertEqual(report["errors"], 0)
-        self.assertFalse(report["safe_to_enable_content"])
+        self.assertFalse(report["all_books_state_eligible"])
     def test_missing_source_is_warning(self):
         self.mutate("UPDATE books SET url=NULL WHERE id=(SELECT min(id) FROM books)")
         self.assertIn("missing_book_url", [f["code"] for f in audit(self.db)["findings"]])
