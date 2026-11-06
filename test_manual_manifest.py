@@ -60,5 +60,27 @@ class ManifestTests(unittest.TestCase):
         self.assertTrue(validate_manifest(self.path))
 
 
+    def test_rejects_duplicate_book_entry(self):
+        self.row()
+        with self.path.open("a", newline="", encoding="utf-8-sig") as file:
+            writer = csv.DictWriter(file, fieldnames=FIELDS)
+            writer.writerow(dict(grade="7", semester="1", subject="تقنية المعلومات",
+                                 title="Verified example", official_url="https://ict.moe.gov.om/book/",
+                                 download_status="not_downloaded", upload_status="not_uploaded",
+                                 metadata_review="pending", rights_status="unknown"))
+        self.assertTrue(any("duplicate" in e for e in validate_manifest(self.path)))
+
+    def test_rejects_upload_without_filename(self):
+        self.row(download_status="downloaded", upload_status="uploaded")
+        self.assertTrue(any("filename" in e for e in validate_manifest(self.path)))
+
+    def test_rejects_filename_path_traversal(self):
+        self.row(local_filename="../book.pdf")
+        self.assertTrue(any("paths" in e for e in validate_manifest(self.path)))
+
+    def test_allows_valid_uploaded_filename(self):
+        self.row(download_status="downloaded", upload_status="uploaded", local_filename="book.pdf")
+        self.assertEqual(validate_manifest(self.path), [])
+
 if __name__ == "__main__":
     unittest.main()
