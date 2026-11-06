@@ -1,0 +1,5 @@
+evidence_id,grade,subject,title,academic_year,semester,edition,source_url,evidence_status,rights_status,notes
+EV001,7,تقنية المعلومات,كتاب تقنية المعلومات - الصف السابع,2026-2027,1,الطبعة التجريبية,https://ict.moe.gov.om/flyers/PDF/2026/EditionsGuide_2026/files/basic-html/page3.html,needs_manual_review,unknown,راجع ترتيب العناصر في صفحة الدليل قبل اعتماد بيانات الكتاب
+EV002,8,تقنية المعلومات,كتاب تقنية المعلومات - الصف الثامن,2026-2027,1,الطبعة التجريبية,https://ict.moe.gov.om/flyers/PDF/2026/EditionsGuide_2026/files/basic-html/page3.html,needs_manual_review,unknown,راجع ترتيب العناصر في صفحة الدليل قبل اعتماد بيانات الكتاب
+EV003,12,تقنية المعلومات,تقنية المعلومات - الفصل الدراسي الأول,2026-2027,1,الطبعة التجريبية,https://ict.moe.gov.om/flyers/PDF/2025/EditionsGuide_2025/files/basic-html/page47.html,needs_manual_review,unknown,تحتاج مقارنة مع صورة الصفحة والنسخة الرسمية الحالية
+EV004,12,تقنية المعلومات,تقنية المعلومات - الفصل الدراسي الثاني,2026-2027,2,الطبعة التجريبية,https://ict.moe.gov.om/flyers/PDF/2025/EditionsGuide_2025/files/basic-html/page47.html,needs_manual_review,unknown,تحتاج مقارنة مع صورة الصفحة والنسخة الرسمية الحالية
