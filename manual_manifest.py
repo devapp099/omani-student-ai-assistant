@@ -25,6 +25,7 @@ def blank_manifest(path):
 
 def validate_manifest(path):
     errors = []
+    seen = set()
     with Path(path).open(encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         if reader.fieldnames != list(FIELDS):
@@ -33,6 +34,12 @@ def validate_manifest(path):
             if None in row or any(v is None for v in row.values()):
                 errors.append(f"line {line}: malformed column count")
                 continue
+            # Detect duplicate entries without assuming book titles are globally unique.
+            identity = tuple(row[field].strip().casefold() for field in
+                             ("grade", "semester", "subject", "book_type", "title", "official_url"))
+            if identity in seen:
+                errors.append(f"line {line}: duplicate book entry")
+            seen.add(identity)
             if row["grade"] not in {str(i) for i in range(1, 13)}:
                 errors.append(f"line {line}: invalid grade")
             if row["semester"] not in {"1", "2"}:
@@ -55,6 +62,11 @@ def validate_manifest(path):
                 errors.append(f"line {line}: invalid review status")
             if row["rights_status"] not in RIGHTS:
                 errors.append(f"line {line}: invalid rights status")
+            filename = row["local_filename"].strip()
+            if filename and (filename in {".", ".."} or "/" in filename or "\\\\" in filename):
+                errors.append(f"line {line}: local filename must not contain paths")
+            if row["upload_status"] == "uploaded" and not filename:
+                errors.append(f"line {line}: uploaded book requires local filename")
             if row["upload_status"] == "uploaded" and row["download_status"] != "downloaded":
                 errors.append(f"line {line}: upload cannot precede download")
     return errors
