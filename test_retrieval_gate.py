@@ -53,6 +53,21 @@ class RetrievalGateTests(unittest.TestCase):
     def test_missing_audit_table_denied(self):
         self.change("DROP TABLE book_review_events")
         self.assertEqual(eligible_chunks(self.db,1),[])
+    def test_revocation_then_new_permission(self):
+        self.change("INSERT INTO book_review_events VALUES(2,1,'restrict_content','https://example.org/revoke')")
+        self.assertEqual(eligible_chunks(self.db,1),[])
+        self.change("INSERT INTO book_review_events VALUES(3,1,'permit_content','https://example.org/new-permission')")
+        self.assertEqual(len(eligible_chunks(self.db,1)),1)
+    def test_latest_permission_requires_https_evidence(self):
+        self.change("INSERT INTO book_review_events VALUES(2,1,'permit_content','http://example.org/unsafe')")
+        self.assertEqual(eligible_chunks(self.db,1),[])
+    def test_credential_bearing_evidence_denied(self):
+        self.change("UPDATE book_review_events SET evidence_url='https://user:pass@example.org/permission'")
+        self.assertEqual(eligible_chunks(self.db,1),[])
+    def test_invalid_limit_types_and_bounds(self):
+        for value in (0,-1,True,1.5,"10",101):
+            with self.subTest(limit=value), self.assertRaises(ValueError):
+                eligible_chunks(self.db,1,value)
     def test_invalid_parameters(self):
         for value in (0,True,"1"):
             with self.assertRaises(ValueError):
