@@ -1,0 +1,64 @@
+import sqlite3
+import tempfile
+import unittest
+from pathlib import Path
+from retrieval_gate import eligible_chunks
+
+class RetrievalGateTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = str(Path(self.tmp.name) / "gate.db")
+        with sqlite3.connect(self.db) as db:
+            db.executescript("""
+            CREATE TABLE books(id INTEGER PRIMARY KEY,review_status TEXT,rights_status TEXT,extraction_status TEXT,url TEXT);
+            CREATE TABLE units(id INTEGER PRIMARY KEY,book_id INTEGER,sequence INTEGER);
+            CREATE TABLE lessons(id INTEGER PRIMARY KEY,unit_id INTEGER,sequence INTEGER);
+            CREATE TABLE chunks(id INTEGER PRIMARY KEY,lesson_id INTEGER,review_status TEXT,page_start INTEGER,page_end INTEGER,text TEXT);
+            CREATE TABLE book_review_events(id INTEGER PRIMARY KEY,book_id INTEGER,decision TEXT,evidence_url TEXT);
+            INSERT INTO books VALUES(1,'approved','permitted','completed','https://example.org/book');
+            INSERT INTO units VALUES(1,1,1);
+            INSERT INTO lessons VALUES(1,1,1);
+            INSERT INTO chunks VALUES(1,1,'approved',1,2,'PRIVATE TEXT');
+            INSERT INTO chunks VALUES(2,1,'pending',3,4,'PRIVATE TEXT');
+            INSERT INTO book_review_events VALUES(1,1,'permit_content','https://example.org/permission');
+            """)
+    def tearDown(self):
+        self.tmp.cleanup()
+    def change(self, sql):
+        with sqlite3.connect(self.db) as db:
+            db.execute(sql)
+    def test_only_approved_chunk_metadata(self):
+        self.assertEqual(eligible_chunks(self.db,1), [{"chunk_id":1,"page_start":1,"page_end":2}])
+        self.assertNotIn("PRIVATE",str(eligible_chunks(self.db,1)))
+    def test_unknown_book(self):
+        self.assertEqual(eligible_chunks(self.db,999),[])
+    def test_pending_review_denied(self):
+        self.change("UPDATE books SET review_status='pending'")
+        self.assertEqual(eligible_chunks(self.db,1),[])
+    def test_restricted_denied(self):
+        self.change("UPDATE books SET rights_status='restricted'")
+        self.assertEqual(eligible_chunks(self.db,1),[])
+    def test_unfinished_extraction_denied(self):
+        self.change("UPDATE books SET extraction_status='not_started'")
+        self.assertEqual(eligible_chunks(self.db,1),[])
+    def test_missing_evidence_denied(self):
+        self.change("DELETE FROM book_review_events")
+        self.assertEqual(eligible_chunks(self.db,1),[])
+    def test_revocation_denied(self):
+        self.change("INSERT INTO book_review_events VALUES(2,1,'restrict_content','https://example.org/revoke')")
+        self.assertEqual(eligible_chunks(self.db,1),[])
+    def test_unsafe_url_denied(self):
+        self.change("UPDATE books SET url='http://example.org/book'")
+        self.assertEqual(eligible_chunks(self.db,1),[])
+    def test_missing_audit_table_denied(self):
+        self.change("DROP TABLE book_review_events")
+        self.assertEqual(eligible_chunks(self.db,1),[])
+    def test_invalid_parameters(self):
+        for value in (0,True,"1"):
+            with self.assertRaises(ValueError):
+                eligible_chunks(self.db,value)
+        with self.assertRaises(ValueError):
+            eligible_chunks(self.db,1,101)
+
+if __name__ == "__main__":
+    unittest.main()
