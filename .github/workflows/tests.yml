@@ -41,3 +41,6 @@ jobs:
 
       - name: Test manual collection progress report
         run: python -m unittest -v test_manifest_progress.py
+
+      - name: Test manual book review queue
+        run: python -m unittest -v test_manifest_review_queue.py
