@@ -32,3 +32,6 @@ jobs:
 
       - name: Test metadata integrity audit
         run: python -m unittest -v test_metadata_audit.py
+
+      - name: Test fail-closed retrieval eligibility
+        run: python -m unittest -v test_retrieval_gate.py
