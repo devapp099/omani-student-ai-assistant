@@ -138,3 +138,16 @@ python -m unittest -v test_manual_manifest.py
 ```
 
 لا يستبدل `init` ملفاً موجوداً. يرفض `check` الصفوف غير الصحيحة والروابط غير الآمنة وحالة الرفع قبل التنزيل. ينبغي إدخال الصفوف بعد التحقق اليدوي من المصدر الرسمي، وعدم رفع الكتب إلى GitHub العام. وجود الملف في Google Drive لا يمنح إذناً لمعالجة نصوص الكتب؛ يلزم توثيق الحقوق بصورة مستقلة.
+
+## Sprint 10 — تقرير تقدم جمع الكتب يدوياً
+
+أُضيف `manifest_progress.py` لإنتاج ملخص لكل صف (1–12) وفصل (1–2)، مع عدد السجلات المدخلة، والكتب التي نُزّلت ورُفعت، والبيانات المعتمدة، وحالات الحقوق المصرح بها. يتوقف التقرير عند أي خطأ في ملف CSV بدلاً من إظهار أرقام مضللة. لا يُنشئ سجلات كتب ولا يقرأ ملفات PDF.
+
+```bash
+python manual_manifest.py init --file manual_books_manifest.csv
+python manifest_progress.py --file manual_books_manifest.csv
+python manifest_progress.py --file manual_books_manifest.csv --json
+python -m unittest -v test_manifest_progress.py
+```
+
+**مهم:** الأرقام تعكس السجلات المدخلة فقط؛ العدد الرسمي المتوقع لكل صف غير معروف، ولا يجوز تفسير الصفر على أنه عدم وجود كتب. حقوق المحتوى تحتاج إثباتاً مستقلاً قبل المعالجة.
