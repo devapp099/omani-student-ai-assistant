@@ -29,3 +29,6 @@ jobs:
 
       - name: Test metadata coverage report
         run: python -m unittest -v test_coverage_report.py
+
+      - name: Test metadata integrity audit
+        run: python -m unittest -v test_metadata_audit.py
