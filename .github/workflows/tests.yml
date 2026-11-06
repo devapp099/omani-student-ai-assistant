@@ -26,3 +26,6 @@ jobs:
 
       - name: Test read-only metadata search
         run: python -m unittest -v test_catalog_search.py
+
+      - name: Test metadata coverage report
+        run: python -m unittest -v test_coverage_report.py
