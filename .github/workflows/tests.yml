@@ -50,3 +50,6 @@ jobs:
 
       - name: Test manifest readiness fail-closed behavior
         run: python -m unittest -v test_manifest_readiness.py
+
+      - name: Test manual upload checklist
+        run: python -m unittest -v test_manual_upload_checklist.py
