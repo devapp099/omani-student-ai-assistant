@@ -162,3 +162,13 @@ python -m unittest -v test_manifest_review_queue.py
 ```
 
 يُرفض ملف الجرد غير الصحيح بالكامل قبل إنتاج قائمة المراجعة. نطاقات وزارة التربية هي إشارة للمراجعة وليست ضماناً لأصالة الرابط أو إذناً باستخدام المحتوى.
+
+
+## Sprint 12 — حماية جدول الكتب من صيغ Excel
+
+يكتشف فحص `manual_manifest.py check` الخلايا التي تبدأ بصيغ محتملة (`=` أو `+` أو `-` أو `@`) حتى بعد مسافات أو BOM، ويرفض ملف CSV قبل استخدامه في التقارير. هذا يحمي فتح الجداول في برامج الجداول الإلكترونية من تفسير قيم غير موثوقة كصيغ. لا يُعدل البيانات الأصلية ولا ينزّل الكتب.
+
+```bash
+python -m unittest -v test_manifest_cell_safety.py test_manual_manifest.py
+python manual_manifest.py check --file manual_books_manifest.csv
+```
