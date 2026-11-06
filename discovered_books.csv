@@ -1,0 +1,6 @@
+discovery_id,grade,subject,title,semester,source_url,verification_status,rights_status,notes
+DISC001,7,تقنية المعلومات,تقنية المعلومات للصف السابع الفصل الأول,1,https://ict.moe.gov.om/book/PDF/7/cls7_IT_P1/files/basic-html/page123.html,source_page_observed,unknown,عنوان صفحة رسمية؛ رقم الطبعة غير محدد
+DISC002,8,تقنية المعلومات,تقنية المعلومات للصف الثامن الفصل الأول,1,https://ict.moe.gov.om/book/PDF/8/IT_cls8_p1/files/basic-html/page1.html,source_page_observed,unknown,تظهر صفحة غلاف وإشارة للطبعة التجريبية 2026
+DISC003,10,تقنية المعلومات,تقنية المعلومات للصف العاشر الفصل الأول,1,https://ict.moe.gov.om/book/PDF/10/cls10_IT_P1/files/basic-html/page1.html,source_page_observed,unknown,تواريخ مختلفة في النص المستخرج وتحتاج مراجعة بصرية
+DISC004,11,تقنية المعلومات,تقنية المعلومات للصف الحادي عشر الفصل الأول,1,https://ict.moe.gov.om/book/PDF/11/cls11_IT_P1/files/basic-html/page1.html,source_page_observed,unknown,غلاف يثبت الصف والفصل وفق عنوان الصفحة ولا يؤكد أحدث طبعة
+DISC005,12,تقنية المعلومات,تقنية المعلومات للصف الثاني عشر الفصل الأول,1,https://ict.moe.gov.om/book/PDF/12/cls12_IT_P1/files/basic-html/page140.html,source_page_observed,unknown,صفحة داخلية منشورة وعنوانها يحدد الصف والفصل
