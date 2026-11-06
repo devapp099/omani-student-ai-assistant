@@ -38,3 +38,6 @@ jobs:
 
       - name: Test manual curriculum manifest
         run: python -m unittest -v test_manual_manifest.py
+
+      - name: Test manual collection progress report
+        run: python -m unittest -v test_manifest_progress.py
