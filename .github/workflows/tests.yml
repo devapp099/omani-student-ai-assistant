@@ -35,3 +35,6 @@ jobs:
 
       - name: Test fail-closed retrieval eligibility
         run: python -m unittest -v test_retrieval_gate.py
+
+      - name: Test manual curriculum manifest
+        run: python -m unittest -v test_manual_manifest.py
