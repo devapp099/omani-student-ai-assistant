@@ -12,7 +12,8 @@ def _secure(url):
         return False  # Reject whitespace/control characters before urlsplit normalizes them.
     try:
         u = urlsplit(url)
-        return u.scheme == "https" and bool(u.hostname) and not (u.username or u.password)
+        return (u.scheme == "https" and bool(u.hostname) and not (u.username or u.password)
+                and (u.port is None or 1 <= u.port <= 65535))
     except ValueError:
         return False
 
