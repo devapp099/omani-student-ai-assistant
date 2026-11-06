@@ -47,6 +47,17 @@ class ManifestTests(unittest.TestCase):
         self.row(official_url="http://example.org/book.pdf")
         self.assertTrue(validate_manifest(self.path))
 
+    def test_rejects_whitespace_and_control_in_official_url(self):
+        for url in ("https://example.org/book pdf", "https://example.org/\\tbook",
+                    "https://example.org/book\\n", "https://example.org/book\\r"):
+            with self.subTest(url=repr(url)):
+                self.row(official_url=url)
+                self.assertTrue(any("official URL" in e for e in validate_manifest(self.path)))
+
+    def test_rejects_credentials_in_official_url(self):
+        self.row(official_url="https://user:secret@example.org/book.pdf")
+        self.assertTrue(any("official URL" in e for e in validate_manifest(self.path)))
+
     def test_rejects_upload_without_download(self):
         self.row(upload_status="uploaded")
         self.assertTrue(validate_manifest(self.path))
