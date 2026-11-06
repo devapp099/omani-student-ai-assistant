@@ -44,3 +44,6 @@ jobs:
 
       - name: Test manual book review queue
         run: python -m unittest -v test_manifest_review_queue.py
+
+      - name: Test spreadsheet CSV cell safety
+        run: python -m unittest -v test_manifest_cell_safety.py
