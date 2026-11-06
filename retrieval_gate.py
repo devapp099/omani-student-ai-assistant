@@ -8,7 +8,7 @@ from curriculum import connect
 ROOT = Path(__file__).resolve().parent
 
 def _secure(url):
-    if not isinstance(url, str) or any(ord(char) <= 32 or ord(char) == 127 for char in url):
+    if not isinstance(url, str) or any(char.isspace() or ord(char) < 32 or ord(char) == 127 or char == "\\" for char in url):
         return False  # Reject whitespace/control characters before urlsplit normalizes them.
     try:
         u = urlsplit(url)
