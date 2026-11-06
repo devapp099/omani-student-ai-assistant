@@ -63,7 +63,7 @@ def validate_manifest(path):
             if row["rights_status"] not in RIGHTS:
                 errors.append(f"line {line}: invalid rights status")
             filename = row["local_filename"].strip()
-            if filename and (filename in {".", ".."} or "/" in filename or "\\\\" in filename):
+            if filename and (filename in {".", ".."} or "/" in filename or "\\" in filename):
                 errors.append(f"line {line}: local filename must not contain paths")
             if row["upload_status"] == "uploaded" and not filename:
                 errors.append(f"line {line}: uploaded book requires local filename")
