@@ -119,6 +119,21 @@ class RetrievalGateTests(unittest.TestCase):
                     db.execute("UPDATE book_review_events SET evidence_url=?", (url,))
                 self.assertEqual(eligible_chunks(self.db, 1), [])
 
+    def test_invalid_page_ranges_excluded(self):
+        with sqlite3.connect(self.db) as db:
+            db.execute("INSERT INTO chunks VALUES(3,1,'approved',0,1,'PRIVATE TEXT')")
+            db.execute("INSERT INTO chunks VALUES(4,1,'approved',5,3,'PRIVATE TEXT')")
+            db.execute("INSERT INTO chunks VALUES(5,1,'approved',NULL,7,'PRIVATE TEXT')")
+            db.execute("INSERT INTO chunks VALUES(6,1,'approved',8,NULL,'PRIVATE TEXT')")
+        self.assertEqual(eligible_chunks(self.db, 1),
+                         [{"chunk_id":1,"page_start":1,"page_end":2}])
+
+    def test_invalid_page_ranges_do_not_consume_limit(self):
+        with sqlite3.connect(self.db) as db:
+            db.execute("INSERT INTO chunks VALUES(0,1,'approved',0,0,'PRIVATE TEXT')")
+        self.assertEqual(eligible_chunks(self.db, 1, limit=1),
+                         [{"chunk_id":1,"page_start":1,"page_end":2}])
+
     def test_invalid_limit_types_and_bounds(self):
         for value in (0,-1,True,1.5,"10",101):
             with self.subTest(limit=value), self.assertRaises(ValueError):
