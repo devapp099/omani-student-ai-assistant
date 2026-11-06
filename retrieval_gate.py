@@ -30,6 +30,8 @@ def eligible_chunks(db_path, book_id, limit=50):
         events = db.execute("SELECT decision,evidence_url FROM book_review_events WHERE book_id=? ORDER BY id", (book_id,)).fetchall()
         permission = False
         for decision, evidence_url in events:
+            if decision not in ("restrict_content", "reject_metadata", "permit_content"):
+                return []  # Unknown audit events must not silently preserve access.
             if decision in ("restrict_content", "reject_metadata"):
                 permission = False
             elif decision == "permit_content":
