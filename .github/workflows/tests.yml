@@ -10,5 +10,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Run tests
+      - name: Test metadata database
         run: python -m unittest -v test_curriculum.py
+      - name: Validate evidence catalogue
+        run: python evidence.py
+      - name: Test evidence validation
+        run: python -m unittest -v test_evidence.py
