@@ -2,6 +2,7 @@
 import argparse
 import csv
 from pathlib import Path
+from manifest_cell_safety import suspicious_cells
 
 FIELDS = ("grade", "semester", "subject", "book_type", "title", "official_url",
           "school_year", "edition", "download_status", "upload_status",
@@ -34,6 +35,8 @@ def validate_manifest(path):
             if None in row or any(v is None for v in row.values()):
                 errors.append(f"line {line}: malformed column count")
                 continue
+            for field in suspicious_cells(row):
+                errors.append(f"line {line}: spreadsheet formula-like value in {field}")
             # Detect duplicate entries without assuming book titles are globally unique.
             identity = tuple(row[field].strip().casefold() for field in
                              ("grade", "semester", "subject", "book_type", "title", "official_url"))
