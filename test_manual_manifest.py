@@ -62,7 +62,7 @@ class ManifestTests(unittest.TestCase):
 
     def test_rejects_duplicate_book_entry(self):
         self.row()
-        with self.path.open("a", newline="", encoding="utf-8-sig") as file:
+        with self.path.open("a", newline="", encoding="utf-8") as file:
             writer = csv.DictWriter(file, fieldnames=FIELDS)
             writer.writerow(dict(grade="7", semester="1", subject="تقنية المعلومات",
                                  title="Verified example", official_url="https://ict.moe.gov.om/book/",
