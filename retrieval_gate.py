@@ -42,6 +42,7 @@ def eligible_chunks(db_path, book_id, limit=50):
         rows = db.execute("""SELECT c.id,c.page_start,c.page_end FROM chunks c
             JOIN lessons l ON c.lesson_id=l.id JOIN units u ON l.unit_id=u.id
             WHERE u.book_id=? AND c.review_status='approved'
+            AND typeof(c.page_start)='integer' AND typeof(c.page_end)='integer'
             AND c.page_start >= 1 AND c.page_end >= c.page_start
             ORDER BY u.sequence,l.sequence,c.id LIMIT ?""", (book_id,limit)).fetchall()
         return [{"chunk_id":r[0],"page_start":r[1],"page_end":r[2]} for r in rows]
