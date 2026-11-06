@@ -64,6 +64,15 @@ class RetrievalGateTests(unittest.TestCase):
     def test_credential_bearing_evidence_denied(self):
         self.change("UPDATE book_review_events SET evidence_url='https://user:pass@example.org/permission'")
         self.assertEqual(eligible_chunks(self.db,1),[])
+    def test_unknown_audit_decision_fails_closed(self):
+        self.change("INSERT INTO book_review_events VALUES(2,1,'unexpected_decision','https://example.org/evidence')")
+        self.assertEqual(eligible_chunks(self.db,1),[])
+
+    def test_unknown_decision_not_overridden_by_later_permission(self):
+        self.change("INSERT INTO book_review_events VALUES(2,1,'unexpected_decision','https://example.org/evidence')")
+        self.change("INSERT INTO book_review_events VALUES(3,1,'permit_content','https://example.org/new-permission')")
+        self.assertEqual(eligible_chunks(self.db,1),[])
+
     def test_invalid_limit_types_and_bounds(self):
         for value in (0,-1,True,1.5,"10",101):
             with self.subTest(limit=value), self.assertRaises(ValueError):
