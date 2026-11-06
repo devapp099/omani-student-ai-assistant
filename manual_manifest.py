@@ -3,6 +3,7 @@ import argparse
 import csv
 from pathlib import Path
 from manifest_cell_safety import suspicious_cells
+from retrieval_gate import _secure
 
 FIELDS = ("grade", "semester", "subject", "book_type", "title", "official_url",
           "school_year", "edition", "download_status", "upload_status",
@@ -49,13 +50,7 @@ def validate_manifest(path):
                 errors.append(f"line {line}: invalid semester")
             if not row["title"].strip() or not row["subject"].strip():
                 errors.append(f"line {line}: missing verified title or subject")
-            from urllib.parse import urlsplit
-            try:
-                url = urlsplit(row["official_url"])
-                safe = url.scheme == "https" and bool(url.hostname) and not (url.username or url.password)
-            except ValueError:
-                safe = False
-            if not safe:
+            if not _secure(row["official_url"]):
                 errors.append(f"line {line}: official URL must be HTTPS")
             if row["download_status"] not in STATUSES:
                 errors.append(f"line {line}: invalid download status")
