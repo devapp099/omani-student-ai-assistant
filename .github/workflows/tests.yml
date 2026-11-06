@@ -47,3 +47,6 @@ jobs:
 
       - name: Test spreadsheet CSV cell safety
         run: python -m unittest -v test_manifest_cell_safety.py
+
+      - name: Test manifest readiness fail-closed behavior
+        run: python -m unittest -v test_manifest_readiness.py
