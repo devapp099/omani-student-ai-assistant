@@ -20,3 +20,6 @@ jobs:
         run: python discovery.py check
       - name: Test discovery registration and security
         run: python -m unittest -v test_discovery.py
+
+      - name: Test book review permissions and audit
+        run: python -m unittest -v test_review_workflow.py
