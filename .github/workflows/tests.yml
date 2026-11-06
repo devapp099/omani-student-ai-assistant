@@ -16,3 +16,7 @@ jobs:
         run: python evidence.py
       - name: Test evidence validation
         run: python -m unittest -v test_evidence.py
+      - name: Validate official book discoveries
+        run: python discovery.py check
+      - name: Test discovery registration and security
+        run: python -m unittest -v test_discovery.py
