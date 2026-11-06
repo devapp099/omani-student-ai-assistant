@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.db
+*.pdf
+*.epub
+*.docx
+*.zip
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+books/
+downloads/
+exports/
+verified_book.json
