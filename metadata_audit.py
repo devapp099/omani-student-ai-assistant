@@ -54,7 +54,7 @@ def audit(db_path):
         "errors": sum(f["severity"] == "error" for f in findings),
         "warnings": sum(f["severity"] == "warning" for f in findings),
         "findings": findings,
-        "safe_to_enable_content": bool(rows) and not findings and all(
+        "all_books_state_eligible": bool(rows) and not findings and all(
             r[4] == "approved" and r[5] == "permitted" and r[6] == "completed"
             for r in rows
         ),
