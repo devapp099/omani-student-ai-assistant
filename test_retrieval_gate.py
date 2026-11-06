@@ -87,6 +87,22 @@ class RetrievalGateTests(unittest.TestCase):
                     db.execute("UPDATE book_review_events SET evidence_url=?", (url,))
                 self.assertEqual(eligible_chunks(self.db, 1), [])
 
+    def test_unicode_whitespace_and_backslash_book_urls_denied(self):
+        for url in ("https://example.org/a\u00a0b", "https://example.org/a\u2003b",
+                    "https://example.org\\@evil.example/book"):
+            with self.subTest(url=url):
+                with sqlite3.connect(self.db) as db:
+                    db.execute("UPDATE books SET url=?", (url,))
+                self.assertEqual(eligible_chunks(self.db, 1), [])
+
+    def test_unicode_whitespace_and_backslash_evidence_urls_denied(self):
+        for url in ("https://example.org/a\u00a0b", "https://example.org/a\u2003b",
+                    "https://example.org\\@evil.example/permission"):
+            with self.subTest(url=url):
+                with sqlite3.connect(self.db) as db:
+                    db.execute("UPDATE book_review_events SET evidence_url=?", (url,))
+                self.assertEqual(eligible_chunks(self.db, 1), [])
+
     def test_invalid_limit_types_and_bounds(self):
         for value in (0,-1,True,1.5,"10",101):
             with self.subTest(limit=value), self.assertRaises(ValueError):
