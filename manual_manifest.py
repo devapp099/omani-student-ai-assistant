@@ -70,7 +70,7 @@ def validate_manifest(path):
                 errors.append(f"line {line}: unsafe local filename")
             if row["upload_status"] == "uploaded" and filename:
                 # A shared upload destination must not silently overwrite another book.
-                key = filename.casefold()
+                key = unicodedata.normalize("NFKC", filename).casefold()
                 if key in uploaded_filenames:
                     errors.append(f"line {line}: duplicate uploaded filename")
                 uploaded_filenames.add(key)
