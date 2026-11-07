@@ -101,6 +101,13 @@ class ManifestTests(unittest.TestCase):
         errors = validate_manifest(self.path)
         self.assertTrue(any("unsafe local filename" in e for e in errors))
 
+    def test_rejects_leading_whitespace_in_filename(self):
+        for filename in (" book.pdf", "\tbook.pdf", "   "):
+            with self.subTest(filename=repr(filename)):
+                self.row(local_filename=filename)
+                self.assertTrue(any("unsafe local filename" in e
+                                    for e in validate_manifest(self.path)))
+
     def test_allows_valid_uploaded_filename(self):
         self.row(download_status="downloaded", upload_status="uploaded", local_filename="book.pdf")
         self.assertEqual(validate_manifest(self.path), [])
