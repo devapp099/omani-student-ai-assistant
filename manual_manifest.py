@@ -41,7 +41,7 @@ def validate_manifest(path):
             for field in suspicious_cells(row):
                 errors.append(f"line {line}: spreadsheet formula-like value in {field}")
             # Detect duplicate entries without assuming book titles are globally unique.
-            identity = tuple(row[field].strip().casefold() for field in
+            identity = tuple(unicodedata.normalize("NFKC", row[field].strip()).casefold() for field in
                              ("grade", "semester", "subject", "book_type", "title", "official_url"))
             if identity in seen:
                 errors.append(f"line {line}: duplicate book entry")
