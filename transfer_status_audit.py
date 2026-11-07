@@ -24,7 +24,7 @@ def audit(data):
     rows = data.get("records")
     if not isinstance(rows, list):
         return ["records must be a list"]
-    source_ids, drive_ids, counts, total_bytes = set(), set(), Counter(), 0
+    source_ids, drive_ids, uploaded_hashes, counts, total_bytes = set(), set(), set(), Counter(), 0
     for index, row in enumerate(rows, 1):
         if not isinstance(row, dict):
             errors.append(f"record {index}: not an object")
@@ -46,6 +46,8 @@ def audit(data):
             pdf_url = row.get("pdf")
             if not isinstance(page_url, str) or not _official_url(page_url, r"/ar/manaheg/\d+/show/\d+"):
                 errors.append(f"record {index}: invalid official source page URL")
+            elif page_url.rsplit("/", 1)[-1] != source:
+                errors.append(f"record {index}: source page ID mismatch")
             if not isinstance(pdf_url, str) or not _official_url(pdf_url, r"/images/manaheg/file/[A-Za-z0-9_-]+\.pdf"):
                 errors.append(f"record {index}: invalid official PDF URL")
         drive, pdf = row.get("drive_file"), row.get("pdf_check")
@@ -79,6 +81,12 @@ def audit(data):
             isinstance(pdf["sha256"], str) and re.fullmatch(r"[0-9a-f]{64}", pdf["sha256"])
         ):
             errors.append(f"record {index}: invalid SHA256")
+        if status == "uploaded_verified" and isinstance(pdf, dict):
+            digest = pdf.get("sha256")
+            if isinstance(digest, str) and re.fullmatch(r"[0-9a-f]{64}", digest):
+                if digest in uploaded_hashes:
+                    errors.append(f"record {index}: duplicate uploaded PDF SHA256")
+                uploaded_hashes.add(digest)
     summary = data.get("summary")
     if not isinstance(summary, dict):
         return errors + ["summary must be an object"]
