@@ -73,5 +73,25 @@ class TestAudit(unittest.TestCase):
         self.assertTrue(any("duplicate Drive file ID" in x for x in audit(d)))
 
 
+    def test_source_page_id_mismatch(self):
+        d = sample()
+        d["records"][0]["page"] = "https://home.moe.gov.om/ar/manaheg/1/show/26"
+        self.assertTrue(any("source page ID mismatch" in x for x in audit(d)))
+
+    def test_duplicate_uploaded_sha256(self):
+        d = sample()
+        duplicate = copy.deepcopy(d["records"][0])
+        duplicate["id"] = "26"
+        duplicate["page"] = "https://home.moe.gov.om/ar/manaheg/1/show/26"
+        duplicate["drive_file"]["id"] = "different-file"
+        duplicate["pdf_check"]["sha256"] = "a" * 64
+        d["records"][0]["pdf_check"]["sha256"] = "a" * 64
+        d["records"].append(duplicate)
+        d["summary"]["catalog_pages"] = 3
+        d["summary"]["uploaded_verified"] = 2
+        d["summary"]["bytes_uploaded"] = 200
+        d["summary"]["status_counts"]["uploaded_verified"] = 2
+        self.assertTrue(any("duplicate uploaded PDF SHA256" in x for x in audit(d)))
+
 if __name__ == "__main__":
     unittest.main()
