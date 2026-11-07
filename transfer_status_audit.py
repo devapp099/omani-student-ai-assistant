@@ -4,8 +4,19 @@ import json
 import re
 from collections import Counter
 from pathlib import Path
+from urllib.parse import urlsplit
 
 STATUSES = {"pending", "uploaded_verified", "source_error", "excluded_wrong_source"}
+
+
+def _official_url(value, path_pattern):
+    parts = urlsplit(value)
+    return (
+        parts.scheme == "https"
+        and parts.netloc == "home.moe.gov.om"
+        and re.fullmatch(path_pattern, parts.path) is not None
+        and not parts.query and not parts.fragment
+    )
 
 
 def audit(data):
@@ -29,6 +40,14 @@ def audit(data):
             errors.append(f"record {index}: invalid status")
             continue
         counts[status] += 1
+        # Metadata-only allowlist: never trust arbitrary retrieval URLs.
+        if status in {"pending", "uploaded_verified", "excluded_wrong_source"}:
+            page_url = row.get("page")
+            pdf_url = row.get("pdf")
+            if not isinstance(page_url, str) or not _official_url(page_url, r"/ar/manaheg/\d+/show/\d+"):
+                errors.append(f"record {index}: invalid official source page URL")
+            if not isinstance(pdf_url, str) or not _official_url(pdf_url, r"/images/manaheg/file/[A-Za-z0-9_-]+\.pdf"):
+                errors.append(f"record {index}: invalid official PDF URL")
         drive, pdf = row.get("drive_file"), row.get("pdf_check")
         if status == "uploaded_verified":
             if not isinstance(drive, dict):
