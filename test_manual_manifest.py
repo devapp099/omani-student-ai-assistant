@@ -105,7 +105,7 @@ class ManifestTests(unittest.TestCase):
         self.assertTrue(any("paths" in e for e in validate_manifest(self.path)))
 
     def test_rejects_unsafe_filename_characters(self):
-        for filename in ("book\\n.pdf", "book\\u202e.pdf", "book.", "book "):
+        for filename in ("book\n.pdf", "book\u202e.pdf", "book.", "book "):
             with self.subTest(filename=repr(filename)):
                 self.row(local_filename=filename)
                 self.assertTrue(any("unsafe local filename" in e
