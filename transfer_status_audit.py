@@ -31,9 +31,12 @@ def audit(data):
         counts[status] += 1
         drive, pdf = row.get("drive_file"), row.get("pdf_check")
         if status == "uploaded_verified":
-            if not isinstance(drive, dict) or not isinstance(pdf, dict):
-                errors.append(f"record {index}: missing upload PDF verification")
+            if not isinstance(drive, dict):
+                errors.append(f"record {index}: missing Drive file metadata")
                 continue
+            if not isinstance(pdf, dict):
+                errors.append(f"record {index}: missing upload PDF verification")
+                pdf = {}
             file_id = drive.get("id")
             if not isinstance(file_id, str) or not file_id:
                 errors.append(f"record {index}: missing Drive file ID")
@@ -42,11 +45,13 @@ def audit(data):
             drive_ids.add(file_id)
             try:
                 size = int(drive.get("size", ""))
-                if size <= 0 or type(pdf.get("bytes")) is not int or size != pdf["bytes"]:
+                if size <= 0:
                     raise ValueError()
                 total_bytes += size
+                if type(pdf.get("bytes")) is not int or size != pdf["bytes"]:
+                    errors.append(f"record {index}: PDF size mismatch")
             except (ValueError, TypeError):
-                errors.append(f"record {index}: PDF size mismatch")
+                errors.append(f"record {index}: invalid Drive file size")
             if type(pdf.get("pages")) is not int or pdf["pages"] < 1:
                 errors.append(f"record {index}: invalid PDF page count")
         elif drive is not None:
