@@ -164,6 +164,14 @@ class ManifestTests(unittest.TestCase):
                 self.assertTrue(any("non-portable local filename" in e
                                     for e in validate_manifest(self.path)))
 
+    def test_rejects_unicode_compatibility_device_names(self):
+        # NFKC equivalents of Windows device names are unsafe on shared storage.
+        for filename in ("ＣＯＮ.pdf", "ｎｕｌ.txt", "ＬＰＴ１.pdf"):
+            with self.subTest(filename=filename):
+                self.row(local_filename=filename)
+                self.assertTrue(any("non-portable local filename" in e
+                                    for e in validate_manifest(self.path)))
+
     def test_allows_valid_uploaded_filename(self):
         self.row(download_status="downloaded", upload_status="uploaded", local_filename="book.pdf")
         self.assertEqual(validate_manifest(self.path), [])
