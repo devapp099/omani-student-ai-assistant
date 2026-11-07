@@ -122,6 +122,25 @@ class ManifestTests(unittest.TestCase):
         self.assertTrue(any("duplicate uploaded filename" in e
                             for e in validate_manifest(self.path)))
 
+    def test_rejects_unicode_equivalent_uploaded_filenames(self):
+        for first, second in (("café.pdf", "cafe\u0301.pdf"),
+                              ("Book.pdf", "Ｂｏｏｋ.pdf")):
+            with self.subTest(first=first, second=second):
+                self.row(download_status="downloaded", upload_status="uploaded",
+                         local_filename=first)
+                with self.path.open("a", newline="", encoding="utf-8") as file:
+                    writer = csv.DictWriter(file, fieldnames=FIELDS)
+                    row = dict.fromkeys(FIELDS, "")
+                    row.update(grade="8", semester="2", subject="Another subject",
+                               title="Another verified example",
+                               official_url="https://ict.moe.gov.om/book/",
+                               download_status="downloaded", upload_status="uploaded",
+                               metadata_review="pending", rights_status="unknown",
+                               local_filename=second)
+                    writer.writerow(row)
+                self.assertTrue(any("duplicate uploaded filename" in e
+                                    for e in validate_manifest(self.path)))
+
     def test_allows_valid_uploaded_filename(self):
         self.row(download_status="downloaded", upload_status="uploaded", local_filename="book.pdf")
         self.assertEqual(validate_manifest(self.path), [])
