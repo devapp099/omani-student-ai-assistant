@@ -103,6 +103,22 @@ class RetrievalGateTests(unittest.TestCase):
                     db.execute("UPDATE book_review_events SET evidence_url=?", (url,))
                 self.assertEqual(eligible_chunks(self.db, 1), [])
 
+    def test_unicode_format_controls_in_book_urls_denied(self):
+        for url in ("https://example.org/a\u202eb", "https://example.org/a\u200bb",
+                    "https://example.org/a\u2066b"):
+            with self.subTest(url=url):
+                with sqlite3.connect(self.db) as db:
+                    db.execute("UPDATE books SET url=?", (url,))
+                self.assertEqual(eligible_chunks(self.db, 1), [])
+
+    def test_unicode_format_controls_in_evidence_urls_denied(self):
+        for url in ("https://example.org/a\u202eb", "https://example.org/a\u200bb",
+                    "https://example.org/a\u2066b"):
+            with self.subTest(url=url):
+                with sqlite3.connect(self.db) as db:
+                    db.execute("UPDATE book_review_events SET evidence_url=?", (url,))
+                self.assertEqual(eligible_chunks(self.db, 1), [])
+
     def test_malformed_book_url_ports_denied(self):
         for url in ("https://example.org:abc/book", "https://example.org:99999/book",
                     "https://example.org:0/book"):
