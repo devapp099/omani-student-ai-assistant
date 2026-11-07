@@ -28,6 +28,13 @@ class TestAudit(unittest.TestCase):
         del d["records"][0]["pdf_check"]
         self.assertTrue(any("missing upload PDF verification" in x for x in audit(d)))
 
+    def test_missing_pdf_check_keeps_drive_bytes_in_total(self):
+        d = sample()
+        del d["records"][0]["pdf_check"]
+        issues = audit(d)
+        self.assertTrue(any("missing upload PDF verification" in x for x in issues))
+        self.assertFalse(any("bytes_uploaded mismatch" in x for x in issues))
+
     def test_wrong_size(self):
         d = sample()
         d["records"][0]["pdf_check"]["bytes"] = 99
