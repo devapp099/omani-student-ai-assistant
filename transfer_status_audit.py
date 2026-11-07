@@ -58,6 +58,8 @@ def audit(data):
             if not isinstance(pdf, dict):
                 errors.append(f"record {index}: missing upload PDF verification")
                 pdf = {}
+            if drive.get("mime_type") != "application/pdf":
+                errors.append(f"record {index}: Drive file is not a PDF")
             folder_key = drive.get("folder_key")
             folder_map = data.get("folder_map")
             if folder_key is not None or drive.get("parent_id") is not None:
