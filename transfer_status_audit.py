@@ -58,6 +58,13 @@ def audit(data):
             if not isinstance(pdf, dict):
                 errors.append(f"record {index}: missing upload PDF verification")
                 pdf = {}
+            folder_key = drive.get("folder_key")
+            folder_map = data.get("folder_map")
+            if folder_key is not None or drive.get("parent_id") is not None:
+                if not isinstance(folder_map, dict) or folder_key not in folder_map:
+                    errors.append(f"record {index}: unknown destination folder")
+                elif drive.get("parent_id") != folder_map[folder_key]:
+                    errors.append(f"record {index}: destination parent folder mismatch")
             file_id = drive.get("id")
             if not isinstance(file_id, str) or not file_id:
                 errors.append(f"record {index}: missing Drive file ID")
