@@ -141,6 +141,14 @@ class ManifestTests(unittest.TestCase):
                 self.assertTrue(any("duplicate uploaded filename" in e
                                     for e in validate_manifest(self.path)))
 
+    def test_rejects_nonportable_filename(self):
+        for filename in ("CON.pdf", "nul.txt", "LPT1.pdf", "COM9.pdf",
+                         "book:part.pdf", "book?.pdf", "book|part.pdf"):
+            with self.subTest(filename=filename):
+                self.row(local_filename=filename)
+                self.assertTrue(any("non-portable local filename" in e
+                                    for e in validate_manifest(self.path)))
+
     def test_allows_valid_uploaded_filename(self):
         self.row(download_status="downloaded", upload_status="uploaded", local_filename="book.pdf")
         self.assertEqual(validate_manifest(self.path), [])
