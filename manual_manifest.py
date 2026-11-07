@@ -68,6 +68,13 @@ def validate_manifest(path):
             if filename and (any(ord(c) < 32 or ord(c) == 127 or unicodedata.category(c) == "Cf" for c in filename)
                              or filename != filename.strip() or filename.endswith((".", " "))):
                 errors.append(f"line {line}: unsafe local filename")
+            # Portable filenames: Windows device names and reserved punctuation are unsafe
+            # even when this validator runs on Linux.
+            if filename and (any(char in '<>:"|?*' for char in filename)
+                             or filename.split(".", 1)[0].upper() in
+                             {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)),
+                              *(f"LPT{i}" for i in range(1, 10))}):
+                errors.append(f"line {line}: non-portable local filename")
             if row["upload_status"] == "uploaded" and filename:
                 # A shared upload destination must not silently overwrite another book.
                 key = unicodedata.normalize("NFKC", filename).casefold()
