@@ -52,6 +52,27 @@ class TestAudit(unittest.TestCase):
         self.assertTrue(any("missing upload PDF verification" in x for x in issues))
         self.assertFalse(any("bytes_uploaded mismatch" in x for x in issues))
 
+    def test_reject_wrong_destination_parent(self):
+        d = sample()
+        d["folder_map"] = {"2:2": "correct-folder"}
+        d["records"][0]["drive_file"].update(
+            {"folder_key": "2:2", "parent_id": "wrong-folder"})
+        self.assertTrue(any("destination parent folder mismatch" in x for x in audit(d)))
+
+    def test_reject_unknown_destination_folder(self):
+        d = sample()
+        d["folder_map"] = {"2:2": "correct-folder"}
+        d["records"][0]["drive_file"].update(
+            {"folder_key": "2:1", "parent_id": "wrong-folder"})
+        self.assertTrue(any("unknown destination folder" in x for x in audit(d)))
+
+    def test_accept_matching_destination_folder(self):
+        d = sample()
+        d["folder_map"] = {"2:2": "correct-folder"}
+        d["records"][0]["drive_file"].update(
+            {"folder_key": "2:2", "parent_id": "correct-folder"})
+        self.assertEqual(audit(d), [])
+
     def test_wrong_size(self):
         d = sample()
         d["records"][0]["pdf_check"]["bytes"] = 99
