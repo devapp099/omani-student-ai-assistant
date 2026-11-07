@@ -114,6 +114,24 @@ def audit(data):
     return errors
 
 
+def eligible_for_retrieval(record):
+    """Fail closed: uploaded PDF metadata alone never authorizes text retrieval."""
+    if not isinstance(record, dict) or record.get("status") != "uploaded_verified":
+        return False
+    edition = record.get("edition_review")
+    rights = record.get("retrieval_rights")
+    return (
+        isinstance(edition, dict)
+        and edition.get("status") == "verified_current"
+        and isinstance(edition.get("evidence_url"), str)
+        and edition["evidence_url"].startswith("https://ict.moe.gov.om/")
+        and isinstance(rights, dict)
+        and rights.get("status") == "permission_verified"
+        and isinstance(rights.get("evidence"), str)
+        and bool(rights["evidence"].strip())
+    )
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Audit transfer ledger without opening books")
     parser.add_argument("file", type=Path)
