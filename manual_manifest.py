@@ -1,6 +1,7 @@
 """Create a blank, reviewable manual-download manifest; never download books."""
 import argparse
 import csv
+import unicodedata
 from pathlib import Path
 from manifest_cell_safety import suspicious_cells
 from retrieval_gate import _secure
@@ -63,6 +64,9 @@ def validate_manifest(path):
             filename = row["local_filename"].strip()
             if filename and (filename in {".", ".."} or "/" in filename or "\\" in filename):
                 errors.append(f"line {line}: local filename must not contain paths")
+            if filename and (any(ord(c) < 32 or ord(c) == 127 or unicodedata.category(c) == "Cf" for c in filename)
+                             or filename.endswith((".", " "))):
+                errors.append(f"line {line}: unsafe local filename")
             if row["upload_status"] == "uploaded" and not filename:
                 errors.append(f"line {line}: uploaded book requires local filename")
             if row["upload_status"] == "uploaded" and row["download_status"] != "downloaded":
