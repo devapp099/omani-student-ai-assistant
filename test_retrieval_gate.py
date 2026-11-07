@@ -146,15 +146,15 @@ class RetrievalGateTests(unittest.TestCase):
 
     def test_non_integer_page_metadata_excluded(self):
         with sqlite3.connect(self.db) as db:
-            db.execute("INSERT INTO chunks VALUES(3,1,'approved','1','2','PRIVATE TEXT')")
+            db.execute("INSERT INTO chunks VALUES(3,1,'approved',CAST('1' AS BLOB),CAST('2' AS BLOB),'PRIVATE TEXT')")
             db.execute("INSERT INTO chunks VALUES(4,1,'approved',1.5,2.5,'PRIVATE TEXT')")
-            db.execute("INSERT INTO chunks VALUES(5,1,'approved',3,'4','PRIVATE TEXT')")
+            db.execute("INSERT INTO chunks VALUES(5,1,'approved',3,CAST('4' AS BLOB),'PRIVATE TEXT')")
         self.assertEqual(eligible_chunks(self.db, 1),
                          [{"chunk_id":1,"page_start":1,"page_end":2}])
 
     def test_non_integer_page_metadata_does_not_consume_limit(self):
         with sqlite3.connect(self.db) as db:
-            db.execute("UPDATE chunks SET page_start='1',page_end='2' WHERE id=1")
+            db.execute("UPDATE chunks SET page_start=CAST('1' AS BLOB),page_end=CAST('2' AS BLOB) WHERE id=1")
             db.execute("INSERT INTO chunks VALUES(3,1,'approved',5,6,'PRIVATE TEXT')")
         self.assertEqual(eligible_chunks(self.db, 1, limit=1),
                          [{"chunk_id":3,"page_start":5,"page_end":6}])
