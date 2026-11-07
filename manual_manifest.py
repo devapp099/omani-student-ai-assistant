@@ -65,7 +65,7 @@ def validate_manifest(path):
             if filename and (filename in {".", ".."} or "/" in filename or "\\" in filename):
                 errors.append(f"line {line}: local filename must not contain paths")
             if filename and (any(ord(c) < 32 or ord(c) == 127 or unicodedata.category(c) == "Cf" for c in filename)
-                             or filename.endswith((".", " "))):
+                             or filename != filename.strip() or filename.endswith((".", " "))):
                 errors.append(f"line {line}: unsafe local filename")
             if row["upload_status"] == "uploaded" and not filename:
                 errors.append(f"line {line}: uploaded book requires local filename")
