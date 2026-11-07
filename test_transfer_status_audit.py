@@ -6,6 +6,8 @@ from transfer_status_audit import audit
 def sample():
     return {"records": [
         {"id": "25", "status": "uploaded_verified",
+         "page": "https://home.moe.gov.om/ar/manaheg/1/show/25",
+         "pdf": "https://home.moe.gov.om/images/manaheg/file/Book25.pdf",
          "drive_file": {"id": "abc", "size": "100"},
          "pdf_check": {"bytes": 100, "pages": 2}},
         {"id": "58", "status": "source_error"}],
@@ -17,6 +19,21 @@ def sample():
 class TestAudit(unittest.TestCase):
     def test_valid(self):
         self.assertEqual(audit(sample()), [])
+
+    def test_reject_external_pdf_host(self):
+        d = sample()
+        d["records"][0]["pdf"] = "https://example.org/images/manaheg/file/Book25.pdf"
+        self.assertTrue(any("invalid official PDF URL" in x for x in audit(d)))
+
+    def test_reject_deceptive_pdf_host(self):
+        d = sample()
+        d["records"][0]["pdf"] = "https://home.moe.gov.om.evil.example/images/manaheg/file/Book25.pdf"
+        self.assertTrue(any("invalid official PDF URL" in x for x in audit(d)))
+
+    def test_reject_source_page_query(self):
+        d = sample()
+        d["records"][0]["page"] = "https://home.moe.gov.om/ar/manaheg/1/show/25?redirect=1"
+        self.assertTrue(any("invalid official source page URL" in x for x in audit(d)))
 
     def test_duplicate_source(self):
         d = sample()
