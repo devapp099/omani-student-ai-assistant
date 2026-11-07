@@ -29,6 +29,7 @@ def blank_manifest(path):
 def validate_manifest(path):
     errors = []
     seen = set()
+    uploaded_filenames = set()
     with Path(path).open(encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         if reader.fieldnames != list(FIELDS):
@@ -67,6 +68,12 @@ def validate_manifest(path):
             if filename and (any(ord(c) < 32 or ord(c) == 127 or unicodedata.category(c) == "Cf" for c in filename)
                              or filename != filename.strip() or filename.endswith((".", " "))):
                 errors.append(f"line {line}: unsafe local filename")
+            if row["upload_status"] == "uploaded" and filename:
+                # A shared upload destination must not silently overwrite another book.
+                key = filename.casefold()
+                if key in uploaded_filenames:
+                    errors.append(f"line {line}: duplicate uploaded filename")
+                uploaded_filenames.add(key)
             if row["upload_status"] == "uploaded" and not filename:
                 errors.append(f"line {line}: uploaded book requires local filename")
             if row["upload_status"] == "uploaded" and row["download_status"] != "downloaded":
