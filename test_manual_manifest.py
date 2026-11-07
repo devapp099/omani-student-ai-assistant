@@ -81,6 +81,21 @@ class ManifestTests(unittest.TestCase):
                                  metadata_review="pending", rights_status="unknown"))
         self.assertTrue(any("duplicate" in e for e in validate_manifest(self.path)))
 
+    def test_rejects_unicode_equivalent_duplicate_book_entries(self):
+        for first, second in (("Café", "Cafe\u0301"), ("Book", "Ｂｏｏｋ")):
+            with self.subTest(first=first, second=second):
+                self.row(title=first)
+                with self.path.open("a", newline="", encoding="utf-8") as file:
+                    writer = csv.DictWriter(file, fieldnames=FIELDS)
+                    row = dict.fromkeys(FIELDS, "")
+                    row.update(grade="7", semester="1", subject="تقنية المعلومات",
+                               title=second, official_url="https://ict.moe.gov.om/book/",
+                               download_status="not_downloaded", upload_status="not_uploaded",
+                               metadata_review="pending", rights_status="unknown")
+                    writer.writerow(row)
+                self.assertTrue(any("duplicate book entry" in e
+                                    for e in validate_manifest(self.path)))
+
     def test_rejects_upload_without_filename(self):
         self.row(download_status="downloaded", upload_status="uploaded")
         self.assertTrue(any("filename" in e for e in validate_manifest(self.path)))
