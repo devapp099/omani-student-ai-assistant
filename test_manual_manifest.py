@@ -96,6 +96,11 @@ class ManifestTests(unittest.TestCase):
                 self.assertTrue(any("unsafe local filename" in e
                                     for e in validate_manifest(self.path)))
 
+    def test_rejects_trailing_space_without_silently_normalizing_filename(self):
+        self.row(local_filename="book.pdf ")
+        errors = validate_manifest(self.path)
+        self.assertTrue(any("unsafe local filename" in e for e in errors))
+
     def test_allows_valid_uploaded_filename(self):
         self.row(download_status="downloaded", upload_status="uploaded", local_filename="book.pdf")
         self.assertEqual(validate_manifest(self.path), [])
