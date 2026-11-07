@@ -60,6 +60,10 @@ def audit(data):
                 pdf = {}
             if drive.get("mime_type") != "application/pdf":
                 errors.append(f"record {index}: Drive file is not a PDF")
+            if not isinstance(drive.get("title"), str) or not drive["title"].lower().endswith(".pdf"):
+                errors.append(f"record {index}: Drive filename must end in .pdf")
+            if drive.get("shared") is not False:
+                errors.append(f"record {index}: Drive file privacy is not confirmed")
             folder_key = drive.get("folder_key")
             folder_map = data.get("folder_map")
             if folder_key is not None or drive.get("parent_id") is not None:
