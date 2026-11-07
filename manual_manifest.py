@@ -61,7 +61,7 @@ def validate_manifest(path):
                 errors.append(f"line {line}: invalid review status")
             if row["rights_status"] not in RIGHTS:
                 errors.append(f"line {line}: invalid rights status")
-            filename = row["local_filename"].strip()
+            filename = row["local_filename"]
             if filename and (filename in {".", ".."} or "/" in filename or "\\" in filename):
                 errors.append(f"line {line}: local filename must not contain paths")
             if filename and (any(ord(c) < 32 or ord(c) == 127 or unicodedata.category(c) == "Cf" for c in filename)
