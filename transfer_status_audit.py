@@ -114,6 +114,21 @@ def audit(data):
     return errors
 
 
+
+def _trusted_edition_evidence(value):
+    """Require canonical HTTPS evidence on the exact official ICT host."""
+    if not isinstance(value, str):
+        return False
+    parts = urlsplit(value)
+    return (
+        parts.scheme == "https"
+        and parts.netloc == "ict.moe.gov.om"
+        and parts.path.startswith("/")
+        and parts.path != "/"
+        and not parts.query
+        and not parts.fragment
+    )
+
 def eligible_for_retrieval(record):
     """Fail closed: uploaded PDF metadata alone never authorizes text retrieval."""
     if not isinstance(record, dict) or record.get("status") != "uploaded_verified":
@@ -124,7 +139,7 @@ def eligible_for_retrieval(record):
         isinstance(edition, dict)
         and edition.get("status") == "verified_current"
         and isinstance(edition.get("evidence_url"), str)
-        and edition["evidence_url"].startswith("https://ict.moe.gov.om/")
+        and _trusted_edition_evidence(edition["evidence_url"])
         and isinstance(rights, dict)
         and rights.get("status") == "permission_verified"
         and isinstance(rights.get("evidence"), str)
