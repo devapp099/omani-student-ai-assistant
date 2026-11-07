@@ -71,7 +71,7 @@ def validate_manifest(path):
             # Portable filenames: Windows device names and reserved punctuation are unsafe
             # even when this validator runs on Linux.
             if filename and (any(char in '<>:"|?*' for char in filename)
-                             or filename.split(".", 1)[0].upper() in
+                             or unicodedata.normalize("NFKC", filename).split(".", 1)[0].upper() in
                              {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)),
                               *(f"LPT{i}" for i in range(1, 10))}):
                 errors.append(f"line {line}: non-portable local filename")
