@@ -18,6 +18,9 @@ def audit(ledger, snapshot):
             continue
         if rec.get("status") == "uploaded_verified":
             item = rec.get("drive_file") or {}
+            if not isinstance(item, dict):
+                ledger_errors.append(f"invalid drive_file for source {rec.get('id')}")
+                continue
             if item.get("id"):
                 if item["id"] in registered:
                     ledger_errors.append(f"duplicate registered Drive ID: {item['id']}")
@@ -112,7 +115,11 @@ def self_test():
     assert any("invalid file metadata" in e for e in audit(ledger, {"2:1": ["bad"]})["errors"])
     assert any("invalid ledger record" in e for e in audit(dict(ledger, records=[None]), {"2:1": []})["errors"])
     assert any("invalid ledger record" in e for e in audit(dict(ledger, records=["bad"]), {"2:1": []})["errors"])
-    print("20 folder snapshot assertions passed")
+    malformed = {"id": "26", "status": "uploaded_verified", "drive_file": "broken"}
+    assert any("invalid drive_file" in e for e in audit(dict(ledger, records=[malformed]), {"2:1": []})["errors"])
+    malformed["drive_file"] = ["not", "metadata"]
+    assert any("invalid drive_file" in e for e in audit(dict(ledger, records=[malformed]), {"2:1": []})["errors"])
+    print("22 folder snapshot assertions passed")
 
 
 if __name__ == "__main__":
