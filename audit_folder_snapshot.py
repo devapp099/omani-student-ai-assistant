@@ -13,6 +13,9 @@ def audit(ledger, snapshot):
     registered = {}
     ledger_errors = []
     for rec in ledger.get("records", []):
+        if not isinstance(rec, dict):
+            ledger_errors.append("invalid ledger record: expected object")
+            continue
         if rec.get("status") == "uploaded_verified":
             item = rec.get("drive_file") or {}
             if item.get("id"):
@@ -107,7 +110,9 @@ def self_test():
     assert audit(ledger, None)["errors"]
     assert any("invalid file metadata" in e for e in audit(ledger, {"2:1": [None]})["errors"])
     assert any("invalid file metadata" in e for e in audit(ledger, {"2:1": ["bad"]})["errors"])
-    print("18 folder snapshot assertions passed")
+    assert any("invalid ledger record" in e for e in audit(dict(ledger, records=[None]), {"2:1": []})["errors"])
+    assert any("invalid ledger record" in e for e in audit(dict(ledger, records=["bad"]), {"2:1": []})["errors"])
+    print("20 folder snapshot assertions passed")
 
 
 if __name__ == "__main__":
