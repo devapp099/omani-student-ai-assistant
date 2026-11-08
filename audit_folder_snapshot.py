@@ -46,13 +46,17 @@ def audit(ledger, snapshot):
                                        "reason": "unregistered; do not index"})
                 continue
             source, saved = registered[fid]
+            problems = []
             if saved.get("folder_key") != folder_key:
-                errors.append(f"source {source}: wrong folder for {fid}")
+                problems.append(f"source {source}: wrong folder for {fid}")
             if str(saved.get("size")) != str(size):
-                errors.append(f"source {source}: size mismatch for {fid}")
+                problems.append(f"source {source}: size mismatch for {fid}")
             if saved.get("parent_id") != folders[folder_key]:
-                errors.append(f"source {source}: ledger parent mismatch for {fid}")
-            verified.append(source)
+                problems.append(f"source {source}: ledger parent mismatch for {fid}")
+            if problems:
+                errors.extend(problems)
+            else:
+                verified.append(source)
     return {"errors": errors, "unregistered": pending_review,
             "matched_registered": sorted(verified, key=int),
             "registered_not_seen": sorted(set(registered) - seen)}
@@ -68,12 +72,14 @@ def self_test():
     assert audit(ledger, {"2:1": [a]})["matched_registered"] == ["25"]
     assert len(audit(ledger, {"2:1": [a, b]})["unregistered"]) == 1
     assert audit(ledger, {"4:1": [a]})["errors"]
+    assert audit(ledger, {"4:1": [a]})["matched_registered"] == []
     assert audit(ledger, {"2:1": [a, a]})["errors"]
     assert audit(ledger, {"2:1": [dict(a, size="124")]})["errors"]
+    assert audit(ledger, {"2:1": [dict(a, size="124")]})["matched_registered"] == []
     assert audit(ledger, {"2:1": [dict(a, size=True)]})["errors"]
     assert audit(ledger, {"2:1": []})["registered_not_seen"] == ["pdf1"]
     assert audit(ledger, {"unknown": []})["errors"]
-    print("8 folder snapshot tests passed")
+    print("10 folder snapshot assertions passed")
 
 
 if __name__ == "__main__":
