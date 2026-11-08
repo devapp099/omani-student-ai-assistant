@@ -30,6 +30,9 @@ def audit(ledger, snapshot):
             errors.append(f"invalid listing: {folder_key}")
             continue
         for item in items:
+            if not isinstance(item, dict):
+                errors.append(f"invalid file metadata in {folder_key}")
+                continue
             fid = item.get("id")
             if not isinstance(fid, str) or not fid:
                 errors.append(f"missing file ID in {folder_key}")
@@ -93,7 +96,9 @@ def self_test():
     assert any("duplicate registered Drive ID" in e for e in audit(duplicate_ledger, {"2:1": [a]})["errors"])
     assert audit(ledger, {})["registered_not_seen"] == []
     assert audit(ledger, {"4:1": []})["registered_not_seen"] == []
-    print("13 folder snapshot assertions passed")
+    assert any("invalid file metadata" in e for e in audit(ledger, {"2:1": [None]})["errors"])
+    assert any("invalid file metadata" in e for e in audit(ledger, {"2:1": ["bad"]})["errors"])
+    print("15 folder snapshot assertions passed")
 
 
 if __name__ == "__main__":
