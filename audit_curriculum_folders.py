@@ -32,6 +32,12 @@ def check(data):
             errors.append(f"source {record.get('id')}: unrecognized grade/semester")
         elif actual != expected:
             errors.append(f"source {record.get('id')}: folder {actual!r} != {expected!r}")
+        else:
+            folder_map = data.get('folder_map')
+            if isinstance(folder_map, dict) and expected in folder_map:
+                parent = (record.get('drive_file') or {}).get('parent_id')
+                if parent != folder_map[expected]:
+                    errors.append(f"source {record.get('id')}: parent {parent!r} != mapped folder {folder_map[expected]!r}")
     return errors
 
 
