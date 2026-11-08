@@ -15,10 +15,13 @@ def audit(data):
         source = record.get("id", "unknown")
         file = record.get("drive_file") or {}
         check = record.get("pdf_check") or {}
-        size = file.get("size")
-        try:
-            size = int(size)
-        except (ValueError, TypeError):
+        raw_size = file.get("size")
+        # int() silently truncates floats and accepts booleans; reject both.
+        if type(raw_size) is int and raw_size > 0:
+            size = raw_size
+        elif isinstance(raw_size, str) and re.fullmatch(r"[0-9]+", raw_size):
+            size = int(raw_size)
+        else:
             size = 0
         if file.get("mime_type") != "application/pdf" or not str(file.get("title", "")).lower().endswith(".pdf"):
             errors.append(f"source {source}: invalid PDF metadata")
