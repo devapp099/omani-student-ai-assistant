@@ -22,6 +22,10 @@ def audit(ledger, snapshot):
                     registered[item["id"]] = (str(rec.get("id")), item)
     seen = set()
     errors, pending_review, verified = ledger_errors, [], []
+    if not isinstance(snapshot, dict):
+        return {"errors": ledger_errors + ["invalid snapshot: expected folder mapping"],
+                "unregistered": [], "matched_registered": [],
+                "registered_not_seen": []}
     for folder_key, items in snapshot.items():
         if folder_key not in folders:
             errors.append(f"unknown folder key: {folder_key}")
@@ -42,6 +46,8 @@ def audit(ledger, snapshot):
                 continue
             seen.add(fid)
             if item.get("mime_type", item.get("mimeType")) != "application/pdf":
+                if fid in registered:
+                    errors.append(f"registered file is not PDF: {fid}")
                 continue
             size = item.get("size")
             if isinstance(size, bool) or not str(size).isdigit() or int(size) < 1:
@@ -96,9 +102,12 @@ def self_test():
     assert any("duplicate registered Drive ID" in e for e in audit(duplicate_ledger, {"2:1": [a]})["errors"])
     assert audit(ledger, {})["registered_not_seen"] == []
     assert audit(ledger, {"4:1": []})["registered_not_seen"] == []
+    assert audit(ledger, {"2:1": [dict(a, mime_type="text/plain")]})["errors"]
+    assert audit(ledger, {"2:1": [dict(a, mime_type="text/plain")]})["matched_registered"] == []
+    assert audit(ledger, None)["errors"]
     assert any("invalid file metadata" in e for e in audit(ledger, {"2:1": [None]})["errors"])
     assert any("invalid file metadata" in e for e in audit(ledger, {"2:1": ["bad"]})["errors"])
-    print("15 folder snapshot assertions passed")
+    print("18 folder snapshot assertions passed")
 
 
 if __name__ == "__main__":
