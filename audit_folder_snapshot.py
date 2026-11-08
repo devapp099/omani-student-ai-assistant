@@ -61,9 +61,15 @@ def audit(ledger, snapshot):
                 errors.extend(problems)
             else:
                 verified.append(source)
+    # Only report missing files in folders actually included in this snapshot.
+    # Partial inventories must not imply that other registered files vanished.
+    covered = {key for key, items in snapshot.items()
+               if key in folders and isinstance(items, list)}
+    missing = {fid for fid, (_, item) in registered.items()
+               if item.get("folder_key") in covered and fid not in seen}
     return {"errors": errors, "unregistered": pending_review,
             "matched_registered": sorted(verified, key=int),
-            "registered_not_seen": sorted(set(registered) - seen)}
+            "registered_not_seen": sorted(missing)}
 
 
 def self_test():
@@ -85,7 +91,9 @@ def self_test():
     assert audit(ledger, {"unknown": []})["errors"]
     duplicate_ledger = dict(ledger, records=ledger["records"] * 2)
     assert any("duplicate registered Drive ID" in e for e in audit(duplicate_ledger, {"2:1": [a]})["errors"])
-    print("11 folder snapshot assertions passed")
+    assert audit(ledger, {})["registered_not_seen"] == []
+    assert audit(ledger, {"4:1": []})["registered_not_seen"] == []
+    print("13 folder snapshot assertions passed")
 
 
 if __name__ == "__main__":
