@@ -11,13 +11,17 @@ from pathlib import Path
 def audit(ledger, snapshot):
     folders = ledger.get("folder_map", {})
     registered = {}
+    ledger_errors = []
     for rec in ledger.get("records", []):
         if rec.get("status") == "uploaded_verified":
             item = rec.get("drive_file") or {}
             if item.get("id"):
-                registered[item["id"]] = (str(rec.get("id")), item)
+                if item["id"] in registered:
+                    ledger_errors.append(f"duplicate registered Drive ID: {item['id']}")
+                else:
+                    registered[item["id"]] = (str(rec.get("id")), item)
     seen = set()
-    errors, pending_review, verified = [], [], []
+    errors, pending_review, verified = ledger_errors, [], []
     for folder_key, items in snapshot.items():
         if folder_key not in folders:
             errors.append(f"unknown folder key: {folder_key}")
@@ -79,7 +83,9 @@ def self_test():
     assert audit(ledger, {"2:1": [dict(a, size=True)]})["errors"]
     assert audit(ledger, {"2:1": []})["registered_not_seen"] == ["pdf1"]
     assert audit(ledger, {"unknown": []})["errors"]
-    print("10 folder snapshot assertions passed")
+    duplicate_ledger = dict(ledger, records=ledger["records"] * 2)
+    assert any("duplicate registered Drive ID" in e for e in audit(duplicate_ledger, {"2:1": [a]})["errors"])
+    print("11 folder snapshot assertions passed")
 
 
 if __name__ == "__main__":
