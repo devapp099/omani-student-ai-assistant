@@ -35,6 +35,15 @@ class FolderAuditTests(unittest.TestCase):
              'drive_file': {'folder_key': '6:1'}}]}
         self.assertEqual(len(check(data)), 1)
 
+
+    def test_non_object_drive_file_fails_closed(self):
+        for malformed in ('broken', ['not', 'metadata'], 17, None):
+            with self.subTest(malformed=malformed):
+                data = {'records': [{'id': '99', 'status': 'uploaded_verified',
+                    'crumbs': ['الصف السادس', 'العلوم', 'الفصل الأول'],
+                    'drive_file': malformed}]}
+                self.assertTrue(check(data))
+
     def test_skip_pending(self):
         self.assertEqual(check({'records': [{'status': 'pending'}]}), [])
 
