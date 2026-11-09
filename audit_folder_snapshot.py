@@ -62,7 +62,8 @@ def audit(ledger, snapshot):
             if fid not in registered:
                 pending_review.append({"id": fid, "folder_key": folder_key,
                                        "name": item.get("title", item.get("name", "")),
-                                       "reason": "unregistered; do not index"})
+                                       "reason": ("unregistered; unusually small PDF; verify pages and cover; do not index"
+                                                  if int(size) <= 20_000 else "unregistered; do not index")})
                 continue
             source, saved = registered[fid]
             problems = []
@@ -96,6 +97,8 @@ def self_test():
     b = {"id": "pdf2", "mime_type": "application/pdf", "size": "15106"}
     assert audit(ledger, {"2:1": [a]})["matched_registered"] == ["25"]
     assert len(audit(ledger, {"2:1": [a, b]})["unregistered"]) == 1
+    assert "unusually small" in audit(ledger, {"2:1": [b]})["unregistered"][0]["reason"]
+    assert "unusually small" not in audit(ledger, {"2:1": [dict(b, size="20001")]})["unregistered"][0]["reason"]
     assert audit(ledger, {"4:1": [a]})["errors"]
     assert audit(ledger, {"4:1": [a]})["matched_registered"] == []
     assert audit(ledger, {"2:1": [a, a]})["errors"]
@@ -119,7 +122,7 @@ def self_test():
     assert any("invalid drive_file" in e for e in audit(dict(ledger, records=[malformed]), {"2:1": []})["errors"])
     malformed["drive_file"] = ["not", "metadata"]
     assert any("invalid drive_file" in e for e in audit(dict(ledger, records=[malformed]), {"2:1": []})["errors"])
-    print("22 folder snapshot assertions passed")
+    print("24 folder snapshot assertions passed")
 
 
 if __name__ == "__main__":
