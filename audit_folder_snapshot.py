@@ -26,6 +26,9 @@ def audit(ledger, snapshot):
                     ledger_errors.append(f"duplicate registered Drive ID: {item['id']}")
                 else:
                     registered[item["id"]] = (str(rec.get("id")), item)
+    # A duplicated ledger registration is ambiguous: never count it as matched.
+    duplicate_ids = {e.split(": ", 1)[1] for e in ledger_errors
+                     if e.startswith("duplicate registered Drive ID: ")}
     seen = set()
     errors, pending_review, verified = ledger_errors, [], []
     if not isinstance(snapshot, dict):
@@ -67,6 +70,8 @@ def audit(ledger, snapshot):
                 continue
             source, saved = registered[fid]
             problems = []
+            if fid in duplicate_ids:
+                problems.append(f"source {source}: ambiguous duplicate registration for {fid}")
             if saved.get("folder_key") != folder_key:
                 problems.append(f"source {source}: wrong folder for {fid}")
             if str(saved.get("size")) != str(size):
@@ -109,6 +114,7 @@ def self_test():
     assert audit(ledger, {"unknown": []})["errors"]
     duplicate_ledger = dict(ledger, records=ledger["records"] * 2)
     assert any("duplicate registered Drive ID" in e for e in audit(duplicate_ledger, {"2:1": [a]})["errors"])
+    assert audit(duplicate_ledger, {"2:1": [a]})["matched_registered"] == []
     assert audit(ledger, {})["registered_not_seen"] == []
     assert audit(ledger, {"4:1": []})["registered_not_seen"] == []
     assert audit(ledger, {"2:1": [dict(a, mime_type="text/plain")]})["errors"]
@@ -122,7 +128,7 @@ def self_test():
     assert any("invalid drive_file" in e for e in audit(dict(ledger, records=[malformed]), {"2:1": []})["errors"])
     malformed["drive_file"] = ["not", "metadata"]
     assert any("invalid drive_file" in e for e in audit(dict(ledger, records=[malformed]), {"2:1": []})["errors"])
-    print("24 folder snapshot assertions passed")
+    print("25 folder snapshot assertions passed")
 
 
 if __name__ == "__main__":
