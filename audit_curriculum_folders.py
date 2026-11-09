@@ -27,7 +27,11 @@ def check(data):
         if record.get('status') != 'uploaded_verified':
             continue
         expected = expected_folder(record.get('crumbs'))
-        actual = (record.get('drive_file') or {}).get('folder_key')
+        drive_file = record.get('drive_file')
+        if not isinstance(drive_file, dict):
+            errors.append(f"source {record.get('id')}: invalid drive_file metadata")
+            continue
+        actual = drive_file.get('folder_key')
         if expected is None:
             errors.append(f"source {record.get('id')}: unrecognized grade/semester")
         elif actual != expected:
@@ -35,7 +39,7 @@ def check(data):
         else:
             folder_map = data.get('folder_map')
             if isinstance(folder_map, dict) and expected in folder_map:
-                parent = (record.get('drive_file') or {}).get('parent_id')
+                parent = drive_file.get('parent_id')
                 if parent != folder_map[expected]:
                     errors.append(f"source {record.get('id')}: parent {parent!r} != mapped folder {folder_map[expected]!r}")
     return errors
