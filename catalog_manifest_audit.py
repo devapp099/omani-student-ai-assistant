@@ -6,6 +6,18 @@ from urllib.parse import urlparse
 
 ALLOWED = {'pending', 'uploaded_verified', 'source_error', 'excluded_wrong_source'}
 
+def trusted_pdf_url(url):
+    if not isinstance(url, str):
+        return False
+    try:
+        parsed = urlparse(url)
+        return (parsed.scheme == 'https' and parsed.netloc == 'home.moe.gov.om'
+                and parsed.path.startswith('/images/manaheg/file/')
+                and parsed.path.lower().endswith('.pdf')
+                and not parsed.params and not parsed.query and not parsed.fragment)
+    except ValueError:
+        return False
+
 def audit(manifest):
     records = manifest['records']
     counts = collections.Counter(r.get('status') for r in records)
@@ -23,8 +35,7 @@ def audit(manifest):
         if status in {'pending', 'uploaded_verified'} and not pdf:
             problems.append(f'missing_pdf_url:{rid}')
         if pdf:
-            parsed = urlparse(pdf)
-            if parsed.scheme != 'https' or parsed.hostname != 'home.moe.gov.om' or not parsed.path.lower().endswith('.pdf'):
+            if not trusted_pdf_url(pdf):
                 problems.append(f'untrusted_pdf_url:{rid}')
             if pdf in pdf_urls:
                 problems.append(f'duplicate_pdf_url:{pdf_urls[pdf]}:{rid}')
