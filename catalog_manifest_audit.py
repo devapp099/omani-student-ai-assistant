@@ -25,7 +25,7 @@ def audit(manifest):
     records = manifest['records']
     counts = collections.Counter(r.get('status') for r in records)
     problems = []
-    ids, pdf_urls, drive_ids = set(), {}, set()
+    ids, pdf_urls, drive_ids, verified_hashes = set(), {}, set(), {}
     for r in records:
         rid = str(r.get('id', ''))
         if not rid or rid in ids:
@@ -54,6 +54,12 @@ def audit(manifest):
             if not isinstance(check.get('pages'), int) or check['pages'] <= 0:
                 problems.append(f'missing_page_count:{rid}')
             sha = check.get('sha256')
+            if isinstance(sha, str) and len(sha) == 64 and all(c in '0123456789abcdefABCDEF' for c in sha):
+                normalized = sha.lower()
+                if normalized in verified_hashes:
+                    problems.append(f'duplicate_verified_pdf_hash:{verified_hashes[normalized]}:{rid}')
+                else:
+                    verified_hashes[normalized] = rid
             if not isinstance(sha, str) or len(sha) != 64 or any(c not in '0123456789abcdefABCDEF' for c in sha):
                 problems.append(f'missing_or_invalid_sha256:{rid}')
             try:
