@@ -2,6 +2,7 @@
 import collections
 import json
 import sys
+import re
 from urllib.parse import urlparse
 
 ALLOWED = {'pending', 'uploaded_verified', 'source_error', 'excluded_wrong_source'}
@@ -31,6 +32,11 @@ def audit(manifest):
         if not rid or rid in ids:
             problems.append(f'duplicate_or_missing_source_id:{rid}')
         ids.add(rid)
+        page = r.get('page')
+        if page is not None:
+            expected_page = rf'https://home\.moe\.gov\.om/ar/manaheg/[0-9]+/show/{re.escape(rid)}'
+            if not isinstance(page, str) or not re.fullmatch(expected_page, page):
+                problems.append(f'source_page_id_or_host_mismatch:{rid}')
         status = r.get('status')
         if status not in ALLOWED:
             problems.append(f'unknown_status:{rid}')
@@ -45,6 +51,11 @@ def audit(manifest):
             pdf_urls[pdf] = rid
         if status == 'uploaded_verified':
             drive = r.get('drive_file') or {}
+            folder_key = drive.get('folder_key')
+            parent_id = drive.get('parent_id')
+            expected_parent = (manifest.get('folder_map') or {}).get(folder_key)
+            if folder_key is not None and (not expected_parent or parent_id != expected_parent):
+                problems.append(f'verified_folder_mismatch:{rid}')
             fid = drive.get('id')
             if not fid or fid in drive_ids:
                 problems.append(f'duplicate_or_missing_drive_id:{rid}')
