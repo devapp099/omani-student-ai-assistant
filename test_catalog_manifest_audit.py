@@ -27,6 +27,10 @@ class ManifestAuditTests(unittest.TestCase):
             'https://home.moe.gov.om/images/manaheg/file/a.pdf#fragment',
             'https://home.moe.gov.om/other/a.pdf',
             'https://home.moe.gov.om/images/manaheg/file/a.pdf;param',
+            'https://home.moe.gov.om/images/manaheg/file/../private.pdf',
+            'https://home.moe.gov.om/images/manaheg/file/%2e%2e%2fprivate.pdf',
+            'https://home.moe.gov.om/images/manaheg/file/subdir/Book1.pdf',
+            'https://home.moe.gov.om/images/manaheg/file/Book%2ePDF',
         ]:
             with self.subTest(url=url):
                 result = audit({'records': [{'id': '1', 'status': 'pending', 'pdf': url}],
