@@ -11,9 +11,12 @@ def trusted_pdf_url(url):
         return False
     try:
         parsed = urlparse(url)
+        prefix = '/images/manaheg/file/'
+        basename = parsed.path.removeprefix(prefix)
         return (parsed.scheme == 'https' and parsed.netloc == 'home.moe.gov.om'
-                and parsed.path.startswith('/images/manaheg/file/')
-                and parsed.path.lower().endswith('.pdf')
+                and parsed.path.startswith(prefix)
+                and bool(basename) and '/' not in basename and '\\' not in basename
+                and '%' not in parsed.path and basename.lower().endswith('.pdf')
                 and not parsed.params and not parsed.query and not parsed.fragment)
     except ValueError:
         return False
