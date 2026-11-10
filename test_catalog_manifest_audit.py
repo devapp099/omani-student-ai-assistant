@@ -69,5 +69,32 @@ class ManifestAuditTests(unittest.TestCase):
         records[1]['pdf_check']['sha256'] = 'b' * 64
         self.assertNotIn('duplicate_verified_pdf_hash:1:2', audit(manifest)['issues'])
 
+
+    def test_source_page_must_match_record_id_and_official_host(self):
+        base = {'id': '58', 'status': 'pending',
+                'pdf': 'https://home.moe.gov.om/images/manaheg/file/Book58.pdf'}
+        for page in ('https://home.moe.gov.om/ar/manaheg/53/show/59',
+                     'https://evil.example/ar/manaheg/53/show/58',
+                     'https://home.moe.gov.om/ar/manaheg/53/show/58?x=1'):
+            with self.subTest(page=page):
+                result = audit({'records': [dict(base, page=page)],
+                                'summary': {'catalog_pages': 1}})
+                self.assertIn('source_page_id_or_host_mismatch:58', result['issues'])
+        good = audit({'records': [dict(base, page='https://home.moe.gov.om/ar/manaheg/53/show/58')],
+                      'summary': {'catalog_pages': 1}})
+        self.assertNotIn('source_page_id_or_host_mismatch:58', good['issues'])
+
+    def test_verified_drive_parent_must_match_folder_map(self):
+        record = {'id': '92', 'status': 'uploaded_verified',
+                  'pdf': 'https://home.moe.gov.om/images/manaheg/file/Book92.pdf',
+                  'drive_file': {'id': 'file92', 'size': '12', 'folder_key': '6:1',
+                                 'parent_id': 'wrong'},
+                  'pdf_check': {'bytes': 12, 'pages': 1, 'sha256': 'a' * 64}}
+        manifest = {'records': [record], 'folder_map': {'6:1': 'correct'},
+                    'summary': {'catalog_pages': 1}}
+        self.assertIn('verified_folder_mismatch:92', audit(manifest)['issues'])
+        record['drive_file']['parent_id'] = 'correct'
+        self.assertNotIn('verified_folder_mismatch:92', audit(manifest)['issues'])
+
 if __name__ == '__main__':
     unittest.main()
