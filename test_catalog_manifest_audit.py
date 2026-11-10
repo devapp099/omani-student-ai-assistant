@@ -37,5 +37,23 @@ class ManifestAuditTests(unittest.TestCase):
                                 'summary': {'catalog_pages': 1}})
                 self.assertTrue(any('untrusted_pdf_url' in x for x in result['issues']))
 
+    def test_summary_reconciliation(self):
+        record = {'id': '1', 'status': 'uploaded_verified',
+                  'pdf': 'https://home.moe.gov.om/images/manaheg/file/Book1.pdf',
+                  'drive_file': {'id': 'file1', 'size': '12'},
+                  'pdf_check': {'bytes': 12, 'pages': 1, 'sha256': 'a' * 64}}
+        manifest = {'records': [record],
+                    'summary': {'catalog_pages': 1, 'status_counts': {'uploaded_verified': 1},
+                                'uploaded_verified': 1, 'bytes_uploaded': 12}}
+        self.assertEqual(audit(manifest)['issues'], [])
+        for field, bad_value, expected in [
+            ('uploaded_verified', 2, 'uploaded_count_mismatch'),
+            ('bytes_uploaded', 13, 'uploaded_bytes_mismatch'),
+            ('status_counts', {'pending': 1}, 'status_counts_mismatch'),
+        ]:
+            with self.subTest(field=field):
+                bad = {'records': [record], 'summary': dict(manifest['summary'], **{field: bad_value})}
+                self.assertIn(expected, audit(bad)['issues'])
+
 if __name__ == '__main__':
     unittest.main()
