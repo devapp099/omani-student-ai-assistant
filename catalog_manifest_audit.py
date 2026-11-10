@@ -61,6 +61,21 @@ def audit(manifest):
                     problems.append(f'file_size_mismatch:{rid}')
             except (ValueError, TypeError):
                 problems.append(f'missing_file_size:{rid}')
+    summary = manifest.get('summary', {})
+    if summary.get('status_counts') is not None:
+        if not isinstance(summary['status_counts'], dict) or summary['status_counts'] != dict(counts):
+            problems.append('status_counts_mismatch')
+    if summary.get('uploaded_verified') is not None:
+        if summary['uploaded_verified'] != counts.get('uploaded_verified', 0):
+            problems.append('uploaded_count_mismatch')
+    if summary.get('bytes_uploaded') is not None:
+        try:
+            total = sum(int((r.get('drive_file') or {}).get('size'))
+                        for r in records if r.get('status') == 'uploaded_verified')
+            if total != summary['bytes_uploaded']:
+                problems.append('uploaded_bytes_mismatch')
+        except (TypeError, ValueError):
+            problems.append('uploaded_bytes_unverifiable')
     if len(records) != manifest.get('summary', {}).get('catalog_pages'):
         problems.append('catalog_count_mismatch')
     return {'records': len(records), 'statuses': dict(counts), 'issues': sorted(problems), 'retrieval_approved': False}
