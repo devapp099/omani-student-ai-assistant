@@ -55,5 +55,19 @@ class ManifestAuditTests(unittest.TestCase):
                 bad = {'records': [record], 'summary': dict(manifest['summary'], **{field: bad_value})}
                 self.assertIn(expected, audit(bad)['issues'])
 
+
+    def test_duplicate_verified_pdf_hash_is_flagged(self):
+        url = 'https://home.moe.gov.om/images/manaheg/file/'
+        records = [
+            {'id': str(i), 'status': 'uploaded_verified', 'pdf': url + f'Book{i}.pdf',
+             'drive_file': {'id': f'file{i}', 'size': '12'},
+             'pdf_check': {'bytes': 12, 'pages': 1, 'sha256': 'A' * 64 if i == 1 else 'a' * 64}}
+            for i in (1, 2)
+        ]
+        manifest = {'records': records, 'summary': {'catalog_pages': 2}}
+        self.assertIn('duplicate_verified_pdf_hash:1:2', audit(manifest)['issues'])
+        records[1]['pdf_check']['sha256'] = 'b' * 64
+        self.assertNotIn('duplicate_verified_pdf_hash:1:2', audit(manifest)['issues'])
+
 if __name__ == '__main__':
     unittest.main()
