@@ -8,7 +8,7 @@ def sample():
         {"id": "25", "status": "uploaded_verified",
          "page": "https://home.moe.gov.om/ar/manaheg/1/show/25",
          "pdf": "https://home.moe.gov.om/images/manaheg/file/Book25.pdf",
-         "drive_file": {"id": "abc", "size": "100"},
+         "drive_file": {"id": "abc", "size": "100", "mime_type": "application/pdf", "title": "Book25.pdf", "shared": False},
          "pdf_check": {"bytes": 100, "pages": 2}},
         {"id": "58", "status": "source_error"}],
         "summary": {"catalog_pages": 2, "uploaded_verified": 1,
