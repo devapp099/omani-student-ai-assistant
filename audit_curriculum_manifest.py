@@ -21,6 +21,11 @@ def audit(manifest):
         errors.append('catalog_pages mismatch')
     if summary.get('status_counts') != dict(counts):
         errors.append('status_counts mismatch')
+    # A non-uploaded record must never claim a Drive file. Otherwise a retry
+    # could treat an unverified or explicitly excluded source as transferred.
+    for r in records:
+        if r.get('status') != 'uploaded_verified' and r.get('drive_file'):
+            errors.append(f"source {r.get('id')}: non-uploaded source has Drive file metadata")
     uploaded = [r for r in records if r.get('status') == 'uploaded_verified']
     file_ids = [r.get('drive_file', {}).get('id') for r in uploaded]
     if any(not x for x in file_ids) or len(file_ids) != len(set(file_ids)):
