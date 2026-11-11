@@ -4,6 +4,7 @@ import json
 import re
 from collections import Counter
 from pathlib import Path
+from urllib.parse import urlsplit
 
 VALID = {'pending', 'uploaded_verified', 'source_error', 'excluded_wrong_source'}
 
@@ -26,6 +27,24 @@ def audit(manifest):
     for r in records:
         if r.get('status') != 'uploaded_verified' and r.get('drive_file'):
             errors.append(f"source {r.get('id')}: non-uploaded source has Drive file metadata")
+    # Treat source links as untrusted input: reject off-domain or insecure links
+    # before any future downloader can use the manifest for network requests.
+    for r in records:
+        for field in ('page', 'pdf'):
+            url = r.get(field)
+            if url is None and field == 'pdf':
+                continue  # Some source pages do not provide a downloadable PDF.
+            if not isinstance(url, str):
+                errors.append(f"source {r.get('id')}: invalid {field} URL")
+                continue
+            try:
+                parsed = urlsplit(url)
+                if (parsed.scheme != 'https' or parsed.hostname != 'home.moe.gov.om'
+                        or parsed.username is not None or parsed.password is not None
+                        or parsed.port not in (None, 443)):
+                    errors.append(f"source {r.get('id')}: untrusted {field} URL")
+            except ValueError:
+                errors.append(f"source {r.get('id')}: malformed {field} URL")
     uploaded = [r for r in records if r.get('status') == 'uploaded_verified']
     file_ids = [r.get('drive_file', {}).get('id') for r in uploaded]
     if any(not x for x in file_ids) or len(file_ids) != len(set(file_ids)):
