@@ -58,3 +58,4 @@ jobs:
         run: |
           python -m unittest -v test_transfer_preflight.py test_transfer_status_audit.py test_transfer_integrity_queue.py
           python -m unittest -v test_catalog_manifest_audit.py test_audit_pdf_integrity.py test_audit_curriculum_folders.py
+          python -m unittest -v test_audit_curriculum_manifest.py
