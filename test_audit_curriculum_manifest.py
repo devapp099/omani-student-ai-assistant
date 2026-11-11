@@ -56,6 +56,21 @@ class ManifestAuditTests(unittest.TestCase):
         result = audit(data)
         self.assertTrue(any('duplicate PDF content' in e for e in result['errors']))
 
+    def test_pending_source_with_drive_file_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][1]['drive_file'] = {'id': 'unverified-file'}
+        self.assertTrue(any('non-uploaded source has Drive file metadata' in e
+                            for e in audit(data)['errors']))
+
+    def test_excluded_source_with_drive_file_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][1]['status'] = 'excluded_wrong_source'
+        data['records'][1]['drive_file'] = {'id': 'wrong-book'}
+        data['summary']['status_counts'] = {
+            'uploaded_verified': 1, 'excluded_wrong_source': 1}
+        self.assertTrue(any('non-uploaded source has Drive file metadata' in e
+                            for e in audit(data)['errors']))
+
     def test_duplicate_source_is_rejected(self):
         data = copy.deepcopy(self.manifest)
         data['records'][1]['id'] = '92'
