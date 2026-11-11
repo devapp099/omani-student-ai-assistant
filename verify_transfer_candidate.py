@@ -6,6 +6,7 @@ Requires: pip install pypdf
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -32,8 +33,7 @@ def preflight(manifest, source_id, filename):
         raise ValueError('Destination folder is not registered')
     url = urlsplit(record.get('pdf') or '')
     if (url.scheme != 'https' or url.hostname != 'home.moe.gov.om'
-            or not url.path.startswith('/images/manaheg/file/')
-            or not url.path.lower().endswith('.pdf')
+            or not re.fullmatch(r'/images/manaheg/file/[A-Za-z0-9_-]+\.pdf', url.path)
             or url.username or url.password or url.query or url.fragment):
         raise ValueError('Missing or untrusted ministry PDF URL')
     path = Path(filename)
@@ -50,8 +50,15 @@ def preflight(manifest, source_id, filename):
         from pypdf import PdfReader
     except ImportError as exc:
         raise RuntimeError('Install pypdf for structural validation') from exc
-    reader = PdfReader(str(path), strict=True)
-    pages = len(reader.pages)
+    try:
+        reader = PdfReader(str(path), strict=True)
+        if reader.is_encrypted:
+            raise ValueError('Encrypted PDF requires manual review')
+        pages = len(reader.pages)
+    except (ValueError, Exception) as exc:
+        if isinstance(exc, ValueError):
+            raise
+        raise ValueError('PDF structure could not be fully validated') from exc
     if pages < 1:
         raise ValueError('PDF has no pages')
     for page in reader.pages:
