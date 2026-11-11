@@ -26,6 +26,7 @@ def audit(manifest):
     if any(not x for x in file_ids) or len(file_ids) != len(set(file_ids)):
         errors.append('missing or duplicate Drive file IDs')
     total = 0
+    seen_digests = {}
     for r in uploaded:
         f = r.get('drive_file', {})
         try:
@@ -39,6 +40,12 @@ def audit(manifest):
                     warnings.append(f"source {r['id']}: SHA256 missing; duplicate-content check unavailable")
                 elif not isinstance(digest, str) or not re.fullmatch(r'[0-9a-fA-F]{64}', digest):
                     errors.append(f"source {r['id']}: invalid SHA256 digest")
+                if isinstance(digest, str) and re.fullmatch(r'[0-9a-fA-F]{64}', digest):
+                    normalized = digest.lower()
+                    if normalized in seen_digests:
+                        errors.append(f"source {r['id']}: duplicate PDF content with source {seen_digests[normalized]}")
+                    else:
+                        seen_digests[normalized] = r['id']
                 if size <= 0 or size != int(check['bytes']):
                     errors.append(f"source {r['id']}: inconsistent PDF byte count")
                 if int(check['pages']) <= 0:
