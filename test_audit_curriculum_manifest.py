@@ -91,6 +91,21 @@ class ManifestAuditTests(unittest.TestCase):
         data['records'][0]['pdf'] = 'https://home.moe.gov.om/images/manaheg/file/book.pdf'
         self.assertEqual(audit(data)['errors'], [])
 
+    def test_same_host_unrelated_pdf_path_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][0]['pdf'] = 'https://home.moe.gov.om/admin/export.pdf'
+        self.assertTrue(any('untrusted pdf URL' in e for e in audit(data)['errors']))
+
+    def test_query_string_on_pdf_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][0]['pdf'] = 'https://home.moe.gov.om/images/manaheg/file/book.pdf?next=external'
+        self.assertTrue(any('untrusted pdf URL' in e for e in audit(data)['errors']))
+
+    def test_page_path_must_match_official_route(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][1]['page'] = 'https://home.moe.gov.om/ar/manaheg/104/other/93'
+        self.assertTrue(any('untrusted page URL' in e for e in audit(data)['errors']))
+
     def test_duplicate_source_is_rejected(self):
         data = copy.deepcopy(self.manifest)
         data['records'][1]['id'] = '92'
