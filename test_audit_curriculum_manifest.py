@@ -23,8 +23,23 @@ class ManifestAuditTests(unittest.TestCase):
     def test_valid_manifest(self):
         result = audit(self.manifest)
         self.assertEqual(result['errors'], [])
-        self.assertEqual(result['warnings'], [])
+        self.assertTrue(any('SHA256 missing' in w for w in result['warnings']))
         self.assertEqual((result['uploaded'], result['pending']), (1, 1))
+
+    def test_valid_sha256_has_no_hash_warning(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][0]['pdf_check']['sha256'] = 'a' * 64
+        self.assertEqual(audit(data)['warnings'], [])
+
+    def test_invalid_sha256_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][0]['pdf_check']['sha256'] = 'not-a-digest'
+        self.assertTrue(any('invalid SHA256' in e for e in audit(data)['errors']))
+
+    def test_non_string_sha256_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][0]['pdf_check']['sha256'] = 123
+        self.assertTrue(any('invalid SHA256' in e for e in audit(data)['errors']))
 
     def test_duplicate_source_is_rejected(self):
         data = copy.deepcopy(self.manifest)
