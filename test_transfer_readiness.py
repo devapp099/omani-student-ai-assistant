@@ -9,9 +9,15 @@ def ledger(rows):
 
 class TransferReadinessTests(unittest.TestCase):
     def test_pending_candidate_not_verified(self):
-        report = summarize(ledger([{'id': '2', 'status': 'pending', 'pdf': 'https://home.moe.gov.om/images/manaheg/file/Book123.pdf'}]))
-        self.assertEqual(report['pending_with_official_pdf_link'], 1)
+        report = summarize(ledger([{'id': '2', 'status': 'pending', 'pdf': 'https://home.moe.gov.om/images/manaheg/file/Book123.pdf', 'crumbs': ['الصف الثاني', 'العلوم', 'الفصل الأول']}]))
+        self.assertEqual(report['pending_with_verified_semester_label'], 1)
         self.assertEqual(report['next_source_ids_for_manual_verification'], ['2'])
+
+    def test_ambiguous_semester_excluded_from_transfer_queue(self):
+        report = summarize(ledger([{'id': '8', 'status': 'pending', 'pdf': 'https://home.moe.gov.om/images/manaheg/file/Book123.pdf', 'crumbs': ['الصف الثاني', 'العلوم', 'الفصل لأول']}]))
+        self.assertEqual(report['pending_with_ambiguous_semester'], ['8'])
+        self.assertEqual(report['pending_with_verified_semester_label'], 0)
+        self.assertEqual(report['next_source_ids_for_manual_verification'], [])
 
     def test_missing_hash_reported_without_changing_status(self):
         report = summarize(ledger([{'id': '3', 'status': 'uploaded_verified', 'pdf_check': {'bytes': 10}}]))
