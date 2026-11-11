@@ -45,6 +45,8 @@ def audit(manifest):
                 valid_path = (re.fullmatch(r'/ar/manaheg/\d+/show/\d+', path)
                               if field == 'page' else
                               re.fullmatch(r'/images/manaheg/file/[A-Za-z0-9_.-]+\.pdf', path, re.I))
+                if field == 'page' and valid_path and path.rsplit('/', 1)[-1] != str(r.get('id')):
+                    errors.append(f"source {r.get('id')}: page URL source ID mismatch")
                 if (parsed.scheme != 'https' or parsed.hostname != 'home.moe.gov.om'
                         or parsed.username is not None or parsed.password is not None
                         or parsed.port not in (None, 443) or parsed.query or parsed.fragment
