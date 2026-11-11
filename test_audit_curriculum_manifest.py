@@ -106,6 +106,11 @@ class ManifestAuditTests(unittest.TestCase):
         data['records'][1]['page'] = 'https://home.moe.gov.om/ar/manaheg/104/other/93'
         self.assertTrue(any('untrusted page URL' in e for e in audit(data)['errors']))
 
+    def test_page_source_id_mismatch_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][1]['page'] = 'https://home.moe.gov.om/ar/manaheg/104/show/999'
+        self.assertTrue(any('page URL source ID mismatch' in e for e in audit(data)['errors']))
+
     def test_duplicate_source_is_rejected(self):
         data = copy.deepcopy(self.manifest)
         data['records'][1]['id'] = '92'
