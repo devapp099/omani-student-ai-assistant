@@ -41,6 +41,21 @@ class ManifestAuditTests(unittest.TestCase):
         data['records'][0]['pdf_check']['sha256'] = 123
         self.assertTrue(any('invalid SHA256' in e for e in audit(data)['errors']))
 
+    def test_duplicate_verified_pdf_digest_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][0]['pdf_check']['sha256'] = 'A' * 64
+        data['records'][1] = {
+            'id': '93', 'status': 'uploaded_verified',
+            'drive_file': {'id': 'drive-93', 'size': '120',
+                           'folder_key': '6:1', 'parent_id': 'folder-six-one'},
+            'pdf_check': {'bytes': 120, 'pages': 3, 'sha256': 'a' * 64},
+        }
+        data['summary']['uploaded_verified'] = 2
+        data['summary']['bytes_uploaded'] = 240
+        data['summary']['status_counts'] = {'uploaded_verified': 2}
+        result = audit(data)
+        self.assertTrue(any('duplicate PDF content' in e for e in result['errors']))
+
     def test_duplicate_source_is_rejected(self):
         data = copy.deepcopy(self.manifest)
         data['records'][1]['id'] = '92'
