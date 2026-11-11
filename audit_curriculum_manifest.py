@@ -1,6 +1,7 @@
 """Read-only consistency audit for a curriculum transfer manifest."""
 import argparse
 import json
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -33,6 +34,11 @@ def audit(manifest):
             if not check:
                 warnings.append(f"source {r['id']}: PDF check metadata missing")
             else:
+                digest = check.get('sha256')
+                if digest is None:
+                    warnings.append(f"source {r['id']}: SHA256 missing; duplicate-content check unavailable")
+                elif not isinstance(digest, str) or not re.fullmatch(r'[0-9a-fA-F]{64}', digest):
+                    errors.append(f"source {r['id']}: invalid SHA256 digest")
                 if size <= 0 or size != int(check['bytes']):
                     errors.append(f"source {r['id']}: inconsistent PDF byte count")
                 if int(check['pages']) <= 0:
