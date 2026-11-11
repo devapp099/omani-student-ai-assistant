@@ -54,6 +54,18 @@ def audit(manifest):
                     errors.append(f"source {r.get('id')}: untrusted {field} URL")
             except ValueError:
                 errors.append(f"source {r.get('id')}: malformed {field} URL")
+    # The same official PDF URL across different source IDs must be reviewed
+    # before transfer: titles or semester labels alone cannot prove uniqueness.
+    pdf_sources = {}
+    for r in records:
+        pdf_url = r.get('pdf')
+        if isinstance(pdf_url, str):
+            if pdf_url in pdf_sources:
+                errors.append(
+                    f"source {r.get('id')}: duplicate PDF URL with source {pdf_sources[pdf_url]}"
+                )
+            else:
+                pdf_sources[pdf_url] = r.get('id')
     uploaded = [r for r in records if r.get('status') == 'uploaded_verified']
     file_ids = [r.get('drive_file', {}).get('id') for r in uploaded]
     if any(not x for x in file_ids) or len(file_ids) != len(set(file_ids)):
