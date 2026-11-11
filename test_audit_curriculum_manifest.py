@@ -9,11 +9,11 @@ class ManifestAuditTests(unittest.TestCase):
         self.manifest = {
             'folder_map': {'6:1': 'folder-six-one'},
             'records': [
-                {'id': '92', 'status': 'uploaded_verified',
+                {'id': '92', 'page': 'https://home.moe.gov.om/ar/manaheg/103/show/92', 'status': 'uploaded_verified',
                  'drive_file': {'id': 'drive-92', 'size': '120',
                                 'folder_key': '6:1', 'parent_id': 'folder-six-one'},
                  'pdf_check': {'bytes': 120, 'pages': 3}},
-                {'id': '93', 'status': 'pending'},
+                {'id': '93', 'page': 'https://home.moe.gov.om/ar/manaheg/104/show/93', 'status': 'pending'},
             ],
             'summary': {'catalog_pages': 2, 'uploaded_verified': 1,
                         'bytes_uploaded': 120,
@@ -45,7 +45,7 @@ class ManifestAuditTests(unittest.TestCase):
         data = copy.deepcopy(self.manifest)
         data['records'][0]['pdf_check']['sha256'] = 'A' * 64
         data['records'][1] = {
-            'id': '93', 'status': 'uploaded_verified',
+            'id': '93', 'page': 'https://home.moe.gov.om/ar/manaheg/104/show/93', 'status': 'uploaded_verified',
             'drive_file': {'id': 'drive-93', 'size': '120',
                            'folder_key': '6:1', 'parent_id': 'folder-six-one'},
             'pdf_check': {'bytes': 120, 'pages': 3, 'sha256': 'a' * 64},
@@ -70,6 +70,26 @@ class ManifestAuditTests(unittest.TestCase):
             'uploaded_verified': 1, 'excluded_wrong_source': 1}
         self.assertTrue(any('non-uploaded source has Drive file metadata' in e
                             for e in audit(data)['errors']))
+
+    def test_off_domain_pdf_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][0]['pdf'] = 'https://attacker.example/book.pdf'
+        self.assertTrue(any('untrusted pdf URL' in e for e in audit(data)['errors']))
+
+    def test_insecure_page_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][1]['page'] = 'http://home.moe.gov.om/ar/manaheg/104/show/93'
+        self.assertTrue(any('untrusted page URL' in e for e in audit(data)['errors']))
+
+    def test_missing_page_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        del data['records'][1]['page']
+        self.assertTrue(any('invalid page URL' in e for e in audit(data)['errors']))
+
+    def test_valid_official_pdf_is_accepted(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][0]['pdf'] = 'https://home.moe.gov.om/images/manaheg/file/book.pdf'
+        self.assertEqual(audit(data)['errors'], [])
 
     def test_duplicate_source_is_rejected(self):
         data = copy.deepcopy(self.manifest)
