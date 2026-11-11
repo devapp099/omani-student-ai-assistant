@@ -111,6 +111,19 @@ class ManifestAuditTests(unittest.TestCase):
         data['records'][1]['page'] = 'https://home.moe.gov.om/ar/manaheg/104/show/999'
         self.assertTrue(any('page URL source ID mismatch' in e for e in audit(data)['errors']))
 
+    def test_duplicate_pdf_url_across_sources_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        shared_url = 'https://home.moe.gov.om/images/manaheg/file/shared.pdf'
+        data['records'][0]['pdf'] = shared_url
+        data['records'][1]['pdf'] = shared_url
+        self.assertTrue(any('duplicate PDF URL' in e for e in audit(data)['errors']))
+
+    def test_distinct_pdf_urls_are_accepted(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][0]['pdf'] = 'https://home.moe.gov.om/images/manaheg/file/a.pdf'
+        data['records'][1]['pdf'] = 'https://home.moe.gov.om/images/manaheg/file/b.pdf'
+        self.assertEqual(audit(data)['errors'], [])
+
     def test_duplicate_source_is_rejected(self):
         data = copy.deepcopy(self.manifest)
         data['records'][1]['id'] = '92'
