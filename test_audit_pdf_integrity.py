@@ -7,7 +7,7 @@ def record(size="120", check=None):
     return {
         "id": "10",
         "status": "uploaded_verified",
-        "drive_file": {"mime_type": "application/pdf", "title": "book.pdf", "size": size},
+        "drive_file": {"id": "drive10", "mime_type": "application/pdf", "title": "book.pdf", "size": size},
         "pdf_check": check if check is not None else {
             "bytes": 120, "pages": 3, "sha256": "a" * 64,
         },
@@ -51,6 +51,7 @@ class PDFIntegrityTests(unittest.TestCase):
         first = record()
         second = record()
         second["id"] = "11"
+        second["drive_file"]["id"] = "drive11"
         errors, warnings = audit({"records": [first, second]})
         self.assertEqual(errors, [])
         self.assertTrue(any("duplicates verified source 10" in warning for warning in warnings))
@@ -61,6 +62,18 @@ class PDFIntegrityTests(unittest.TestCase):
         second["id"] = "11"
         second["status"] = "pending"
         self.assertEqual(audit({"records": [first, second]}), ([], []))
+
+    def test_duplicate_drive_id_error(self):
+        first, second = record(), record()
+        second["id"] = "11"
+        errors, _ = audit({"records": [first, second]})
+        self.assertTrue(any("Drive file ID duplicates" in error for error in errors))
+
+    def test_wrong_folder_parent_error(self):
+        item = record()
+        item["drive_file"].update(folder_key="6:1", parent_id="wrong")
+        errors, _ = audit({"folder_map": {"6:1": "correct"}, "records": [item]})
+        self.assertTrue(any("Drive parent differs" in error for error in errors))
 
     def test_pending_ignored(self):
         item = record()
