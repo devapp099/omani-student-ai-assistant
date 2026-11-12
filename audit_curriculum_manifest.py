@@ -114,6 +114,10 @@ def audit(manifest):
                     errors.append(f"source {r['id']}: invalid page count")
             if f.get('parent_id') != manifest.get('folder_map', {}).get(f.get('folder_key')):
                 errors.append(f"source {r['id']}: folder mapping mismatch")
+            # A tiny PDF may be a placeholder or an incomplete download. Flag it
+            # for manual review without falsely declaring the file corrupt.
+            if 0 < size < 100_000:
+                warnings.append(f"source {r['id']}: unusually small PDF ({size} bytes); verify completeness")
             total += size
         except (KeyError, ValueError, TypeError):
             errors.append(f"source {r['id']}: incomplete PDF metadata")
