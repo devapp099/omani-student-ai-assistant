@@ -138,8 +138,13 @@ def audit(manifest):
                         seen_digests[normalized] = r['id']
                 if size <= 0 or size != int(check['bytes']):
                     errors.append(f"source {r['id']}: inconsistent PDF byte count")
-                if int(check['pages']) <= 0:
+                pages = int(check['pages'])
+                if pages <= 0:
                     errors.append(f"source {r['id']}: invalid page count")
+                elif pages == 1:
+                    # A one-page PDF can be legitimate, but must not be treated
+                    # as a complete textbook without inspecting its content.
+                    warnings.append(f"source {r['id']}: single-page PDF; inspect cover and content before retrieval")
             if f.get('parent_id') != manifest.get('folder_map', {}).get(f.get('folder_key')):
                 errors.append(f"source {r['id']}: folder mapping mismatch")
             # A tiny PDF may be a placeholder or an incomplete download. Flag it
