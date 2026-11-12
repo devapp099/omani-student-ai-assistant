@@ -67,6 +67,17 @@ def audit(manifest):
             else:
                 pdf_sources[pdf_url] = r.get('id')
     uploaded = [r for r in records if r.get('status') == 'uploaded_verified']
+    # A verified transfer must be an actual PDF on both ends. A valid-looking
+    # filename or a non-empty Drive ID alone is not evidence of a PDF upload.
+    for r in uploaded:
+        f = r.get('drive_file') or {}
+        pdf_url = r.get('pdf')
+        if not isinstance(pdf_url, str) or not pdf_url.lower().endswith('.pdf'):
+            errors.append(f"source {r.get('id')}: verified source lacks a PDF URL")
+        if f.get('mime_type') != 'application/pdf':
+            errors.append(f"source {r.get('id')}: verified Drive file is not PDF MIME type")
+        if not isinstance(f.get('title'), str) or not f['title'].lower().endswith('.pdf'):
+            errors.append(f"source {r.get('id')}: verified Drive filename lacks .pdf extension")
     file_ids = [r.get('drive_file', {}).get('id') for r in uploaded]
     if any(not x for x in file_ids) or len(file_ids) != len(set(file_ids)):
         errors.append('missing or duplicate Drive file IDs')
