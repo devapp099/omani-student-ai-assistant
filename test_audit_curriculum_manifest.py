@@ -142,6 +142,7 @@ class ManifestAuditTests(unittest.TestCase):
 
     def test_missing_drive_filename_is_rejected(self):
         data = copy.deepcopy(self.manifest)
+        del data['records'][0]['drive_file']['title']
         self.assertTrue(any('missing Drive filename' in e for e in audit(data)['errors']))
 
     def test_duplicate_source_is_rejected(self):
