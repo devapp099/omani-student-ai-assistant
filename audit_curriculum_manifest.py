@@ -70,6 +70,23 @@ def audit(manifest):
     file_ids = [r.get('drive_file', {}).get('id') for r in uploaded]
     if any(not x for x in file_ids) or len(file_ids) != len(set(file_ids)):
         errors.append('missing or duplicate Drive file IDs')
+    # A filename collision in the same Drive folder can silently overwrite or
+    # confuse retrieval even when Drive IDs differ. Compare case-insensitively.
+    seen_names = {}
+    for r in uploaded:
+        f = r.get('drive_file') or {}
+        name = f.get('title')
+        parent = f.get('parent_id')
+        if not isinstance(name, str) or not name.strip():
+            errors.append(f"source {r.get('id')}: missing Drive filename")
+            continue
+        if not parent:
+            continue  # Existing folder mapping validation handles this.
+        key = (parent, name.casefold())
+        if key in seen_names:
+            errors.append(f"source {r.get('id')}: duplicate Drive filename with source {seen_names[key]}")
+        else:
+            seen_names[key] = r.get('id')
     total = 0
     seen_digests = {}
     for r in uploaded:
