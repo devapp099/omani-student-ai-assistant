@@ -87,6 +87,23 @@ def audit(manifest):
             errors.append(f"source {r.get('id')}: duplicate Drive filename with source {seen_names[key]}")
         else:
             seen_names[key] = r.get('id')
+    # Verify destination grade and semester against the source breadcrumbs.
+    # Normalize Arabic hamza variants in semester labels (الاول / الأول).
+    grade_words = ('الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس',
+                   'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر',
+                   'الحادي عشر', 'الثاني عشر')
+    for r in uploaded:
+        crumbs = r.get('crumbs') or []
+        grade_label = crumbs[0] if len(crumbs) > 0 else ''
+        semester_label = crumbs[2] if len(crumbs) > 2 else ''
+        grade = next((i for i, word in enumerate(grade_words, 1)
+                      if grade_label == 'الصف ' + word), None)
+        normalized = semester_label.replace('أ', 'ا').replace('إ', 'ا')
+        semester = (1 if normalized == 'الفصل الاول' else
+                    2 if normalized == 'الفصل الثاني' else None)
+        expected = f'{grade}:{semester}' if grade and semester else None
+        if not expected or (r.get('drive_file') or {}).get('folder_key') != expected:
+            errors.append(f"source {r.get('id')}: destination grade/semester differs from source breadcrumbs")
     total = 0
     seen_digests = {}
     for r in uploaded:
