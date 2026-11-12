@@ -34,6 +34,8 @@ def audit(data):
             errors.append(f"source {source}: PDF byte count differs from Drive size")
         if type(check.get("pages")) is not int or check["pages"] <= 0:
             errors.append(f"source {source}: invalid PDF page count")
+        if check.get("pages") == 1 and type(check.get("pages")) is int:
+            warnings.append(f"source {source}: single-page PDF requires manual cover/content review")
         digest = check.get("sha256")
         if digest is None:
             warnings.append(f"source {source}: SHA256 missing")
