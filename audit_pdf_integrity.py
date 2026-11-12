@@ -10,12 +10,26 @@ SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 def audit(data):
     errors, warnings = [], []
     seen_digests = {}
+    seen_drive_ids = {}
+    folder_map = data.get("folder_map") or {}
     for record in data.get("records", []):
         if record.get("status") != "uploaded_verified":
             continue
         source = record.get("id", "unknown")
         file = record.get("drive_file") or {}
         check = record.get("pdf_check") or {}
+        drive_id = file.get("id")
+        if drive_id:
+            if drive_id in seen_drive_ids:
+                errors.append(f"source {source}: Drive file ID duplicates verified source {seen_drive_ids[drive_id]}")
+            else:
+                seen_drive_ids[drive_id] = source
+        else:
+            warnings.append(f"source {source}: Drive file ID missing")
+        folder_key = file.get("folder_key")
+        if folder_key and folder_map and folder_key in folder_map:
+            if file.get("parent_id") != folder_map[folder_key]:
+                errors.append(f"source {source}: Drive parent differs from folder map")
         raw_size = file.get("size")
         # int() silently truncates floats and accepts booleans; reject both.
         if type(raw_size) is int and raw_size > 0:
