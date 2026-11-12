@@ -47,6 +47,21 @@ class PDFIntegrityTests(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertTrue(any("single-page PDF" in warning for warning in warnings))
 
+    def test_duplicate_verified_sha256_warns(self):
+        first = record()
+        second = record()
+        second["id"] = "11"
+        errors, warnings = audit({"records": [first, second]})
+        self.assertEqual(errors, [])
+        self.assertTrue(any("duplicates verified source 10" in warning for warning in warnings))
+
+    def test_pending_duplicate_not_flagged(self):
+        first = record()
+        second = record()
+        second["id"] = "11"
+        second["status"] = "pending"
+        self.assertEqual(audit({"records": [first, second]}), ([], []))
+
     def test_pending_ignored(self):
         item = record()
         item["status"] = "pending"
