@@ -40,6 +40,13 @@ class PDFIntegrityTests(unittest.TestCase):
         ]})
         self.assertTrue(errors)
 
+    def test_single_page_requires_review(self):
+        errors, warnings = audit({"records": [
+            record(check={"bytes": 120, "pages": 1, "sha256": "a" * 64})
+        ]})
+        self.assertEqual(errors, [])
+        self.assertTrue(any("single-page PDF" in warning for warning in warnings))
+
     def test_pending_ignored(self):
         item = record()
         item["status"] = "pending"
