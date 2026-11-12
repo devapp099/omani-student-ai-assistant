@@ -9,6 +9,7 @@ SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 
 def audit(data):
     errors, warnings = [], []
+    seen_digests = {}
     for record in data.get("records", []):
         if record.get("status") != "uploaded_verified":
             continue
@@ -41,6 +42,10 @@ def audit(data):
             warnings.append(f"source {source}: SHA256 missing")
         elif not isinstance(digest, str) or not SHA256.fullmatch(digest):
             errors.append(f"source {source}: invalid SHA256 format")
+        elif digest in seen_digests:
+            warnings.append(f"source {source}: PDF SHA256 duplicates verified source {seen_digests[digest]}")
+        else:
+            seen_digests[digest] = source
     return errors, warnings
 
 
