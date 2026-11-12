@@ -184,6 +184,17 @@ class ManifestAuditTests(unittest.TestCase):
         data['records'][0]['drive_file']['parent_id'] = 'other-folder'
         self.assertTrue(any('folder mapping mismatch' in x for x in audit(data)['errors']))
 
+    def test_single_page_pdf_requires_manual_review(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][0]['pdf_check']['pages'] = 1
+        result = audit(data)
+        self.assertEqual(result['errors'], [])
+        self.assertTrue(any('single-page PDF' in w for w in result['warnings']))
+
+    def test_multi_page_pdf_has_no_single_page_warning(self):
+        result = audit(self.manifest)
+        self.assertFalse(any('single-page PDF' in w for w in result['warnings']))
+
     def test_invalid_page_count_is_rejected(self):
         data = copy.deepcopy(self.manifest)
         data['records'][0]['pdf_check']['pages'] = 0
