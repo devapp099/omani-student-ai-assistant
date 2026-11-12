@@ -10,7 +10,7 @@ class ManifestAuditTests(unittest.TestCase):
             'folder_map': {'6:1': 'folder-six-one'},
             'records': [
                 {'id': '92', 'page': 'https://home.moe.gov.om/ar/manaheg/103/show/92', 'status': 'uploaded_verified',
-                 'drive_file': {'id': 'drive-92', 'size': '120',
+                 'drive_file': {'id': 'drive-92', 'title': 'science-92.pdf', 'size': '120',
                                 'folder_key': '6:1', 'parent_id': 'folder-six-one'},
                  'pdf_check': {'bytes': 120, 'pages': 3}},
                 {'id': '93', 'page': 'https://home.moe.gov.om/ar/manaheg/104/show/93', 'status': 'pending'},
@@ -46,7 +46,7 @@ class ManifestAuditTests(unittest.TestCase):
         data['records'][0]['pdf_check']['sha256'] = 'A' * 64
         data['records'][1] = {
             'id': '93', 'page': 'https://home.moe.gov.om/ar/manaheg/104/show/93', 'status': 'uploaded_verified',
-            'drive_file': {'id': 'drive-93', 'size': '120',
+            'drive_file': {'id': 'drive-93', 'title': 'science-93.pdf', 'size': '120',
                            'folder_key': '6:1', 'parent_id': 'folder-six-one'},
             'pdf_check': {'bytes': 120, 'pages': 3, 'sha256': 'a' * 64},
         }
@@ -123,6 +123,26 @@ class ManifestAuditTests(unittest.TestCase):
         data['records'][0]['pdf'] = 'https://home.moe.gov.om/images/manaheg/file/a.pdf'
         data['records'][1]['pdf'] = 'https://home.moe.gov.om/images/manaheg/file/b.pdf'
         self.assertEqual(audit(data)['errors'], [])
+
+    def test_duplicate_drive_filename_in_same_folder_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][0]['drive_file']['title'] = 'Science.PDF'
+        data['records'][1] = {
+            'id': '93', 'page': 'https://home.moe.gov.om/ar/manaheg/104/show/93',
+            'status': 'uploaded_verified',
+            'drive_file': {'id': 'drive-93', 'title': 'science.pdf',
+                           'size': '100', 'folder_key': '6:1',
+                           'parent_id': 'folder-six-one'},
+            'pdf_check': {'bytes': 100, 'pages': 2},
+        }
+        data['summary']['uploaded_verified'] = 2
+        data['summary']['bytes_uploaded'] = 220
+        data['summary']['status_counts'] = {'uploaded_verified': 2}
+        self.assertTrue(any('duplicate Drive filename' in e for e in audit(data)['errors']))
+
+    def test_missing_drive_filename_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        self.assertTrue(any('missing Drive filename' in e for e in audit(data)['errors']))
 
     def test_duplicate_source_is_rejected(self):
         data = copy.deepcopy(self.manifest)
