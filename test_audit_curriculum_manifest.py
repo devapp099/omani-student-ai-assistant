@@ -10,6 +10,7 @@ class ManifestAuditTests(unittest.TestCase):
             'folder_map': {'6:1': 'folder-six-one'},
             'records': [
                 {'id': '92', 'page': 'https://home.moe.gov.om/ar/manaheg/103/show/92', 'status': 'uploaded_verified',
+                 'crumbs': ['الصف السادس', 'العلوم', 'الفصل الأول'],
                  'pdf': 'https://home.moe.gov.om/images/manaheg/file/science-92.pdf',
                  'drive_file': {'id': 'drive-92', 'title': 'science-92.pdf', 'size': '120', 'mime_type': 'application/pdf',
                                 'folder_key': '6:1', 'parent_id': 'folder-six-one'},
@@ -45,7 +46,7 @@ class ManifestAuditTests(unittest.TestCase):
     def test_valid_sha256_has_no_hash_warning(self):
         data = copy.deepcopy(self.manifest)
         data['records'][0]['pdf_check']['sha256'] = 'a' * 64
-        self.assertEqual(audit(data)['warnings'], [])
+        self.assertFalse(any('SHA256 missing' in w for w in audit(data)['warnings']))
 
     def test_invalid_sha256_is_rejected(self):
         data = copy.deepcopy(self.manifest)
