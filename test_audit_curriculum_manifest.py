@@ -10,7 +10,8 @@ class ManifestAuditTests(unittest.TestCase):
             'folder_map': {'6:1': 'folder-six-one'},
             'records': [
                 {'id': '92', 'page': 'https://home.moe.gov.om/ar/manaheg/103/show/92', 'status': 'uploaded_verified',
-                 'drive_file': {'id': 'drive-92', 'title': 'science-92.pdf', 'size': '120',
+                 'pdf': 'https://home.moe.gov.om/images/manaheg/file/science-92.pdf',
+                 'drive_file': {'id': 'drive-92', 'title': 'science-92.pdf', 'size': '120', 'mime_type': 'application/pdf',
                                 'folder_key': '6:1', 'parent_id': 'folder-six-one'},
                  'pdf_check': {'bytes': 120, 'pages': 3}},
                 {'id': '93', 'page': 'https://home.moe.gov.om/ar/manaheg/104/show/93', 'status': 'pending'},
@@ -19,6 +20,21 @@ class ManifestAuditTests(unittest.TestCase):
                         'bytes_uploaded': 120,
                         'status_counts': {'uploaded_verified': 1, 'pending': 1}},
         }
+
+    def test_verified_missing_pdf_source_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        del data['records'][0]['pdf']
+        self.assertTrue(any('verified source lacks a PDF URL' in e for e in audit(data)['errors']))
+
+    def test_verified_non_pdf_mime_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][0]['drive_file']['mime_type'] = 'text/html'
+        self.assertTrue(any('not PDF MIME type' in e for e in audit(data)['errors']))
+
+    def test_verified_non_pdf_filename_is_rejected(self):
+        data = copy.deepcopy(self.manifest)
+        data['records'][0]['drive_file']['title'] = 'science-92.html'
+        self.assertTrue(any('lacks .pdf extension' in e for e in audit(data)['errors']))
 
     def test_valid_manifest(self):
         result = audit(self.manifest)
