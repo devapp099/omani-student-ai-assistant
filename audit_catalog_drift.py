@@ -9,7 +9,8 @@ import re
 from pathlib import Path
 from urllib.parse import urlsplit
 
-SOURCE_PATH = re.compile(r"/ar/manaheg/\d+/show/(\d+)(?:[/?#]|$)")
+SOURCE_PATH = re.compile(r"/ar/manaheg/\d+/show/([1-9]\d*)/?$")
+DIGITS = re.compile(r"[1-9]\d*$")
 
 
 def source_id(value):
