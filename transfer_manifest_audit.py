@@ -4,7 +4,7 @@ import re
 import unittest
 from urllib.parse import urlsplit
 
-PAGE = re.compile(r"/ar/manaheg/\\d+/show/([1-9]\\d*)/?$")
+PAGE = re.compile(r"/ar/manaheg/\d+/show/([1-9]\d*)/?$")
 STATUSES = ("pending", "source_error", "excluded_wrong_source", "uploaded_verified")
 
 def audit(data):
@@ -14,7 +14,7 @@ def audit(data):
     total, incomplete = 0, []
     for r in data["records"]:
         sid = str(r.get("id", ""))
-        if not re.fullmatch(r"[1-9]\\d*", sid) or sid in ids:
+        if not re.fullmatch(r"[1-9]\d*", sid) or sid in ids:
             raise ValueError("Duplicate/invalid source ID")
         ids.add(sid)
         u = urlsplit(r.get("page", ""))
