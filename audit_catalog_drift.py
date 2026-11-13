@@ -7,6 +7,7 @@ import argparse
 import json
 import re
 from pathlib import Path
+from urllib.parse import urlsplit
 
 SOURCE_PATH = re.compile(r"/ar/manaheg/\d+/show/(\d+)(?:[/?#]|$)")
 
@@ -16,13 +17,19 @@ def source_id(value):
         return str(value)
     if isinstance(value, str):
         value = value.strip()
-        if value.isdecimal() and int(value) > 0:
+        if DIGITS.fullmatch(value):
             return str(int(value))
-        match = SOURCE_PATH.search(value)
-        if match and int(match.group(1)) > 0:
-            return str(int(match.group(1)))
-    raise ValueError(f"Invalid source identifier: {value!r}")
-
+        try:
+            parsed = urlsplit(value)
+            if (parsed.scheme == 'https' and parsed.hostname == 'home.moe.gov.om'
+                    and parsed.username is None and parsed.password is None
+                    and parsed.port is None):
+                match = SOURCE_PATH.fullmatch(parsed.path)
+                if match:
+                    return str(int(match.group(1)))
+        except ValueError:
+            pass
+    raise ValueError(f"Invalid or untrusted source identifier: {value!r}")
 
 def compare(manifest, official_ids):
     records = manifest['records']
