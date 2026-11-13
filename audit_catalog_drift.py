@@ -24,7 +24,7 @@ def source_id(value):
             parsed = urlsplit(value)
             if (parsed.scheme == 'https' and parsed.hostname == 'home.moe.gov.om'
                     and parsed.username is None and parsed.password is None
-                    and parsed.port is None):
+                    and parsed.port is None and not parsed.query and not parsed.fragment):
                 match = SOURCE_PATH.fullmatch(parsed.path)
                 if match:
                     return str(int(match.group(1)))
@@ -36,7 +36,14 @@ def compare(manifest, official_ids):
     records = manifest['records']
     if not isinstance(records, list):
         raise ValueError('records must be a list')
-    old = [source_id(r['id']) for r in records]
+    old = []
+    for record in records:
+        if not isinstance(record, dict) or 'id' not in record or 'page' not in record:
+            raise ValueError('Each manifest record needs an id and official page URL')
+        identifier = source_id(record['id'])
+        if source_id(record['page']) != identifier:
+            raise ValueError(f'Manifest source ID does not match official page: {identifier}')
+        old.append(identifier)
     new = [source_id(i) for i in official_ids]
     if len(set(old)) != len(old) or len(set(new)) != len(new):
         raise ValueError('Duplicate source identifiers; review input before comparing')
