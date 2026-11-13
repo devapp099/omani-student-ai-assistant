@@ -22,6 +22,14 @@ def audit(data):
         if (u.scheme != "https" or u.netloc != "home.moe.gov.om"
                 or u.query or u.fragment or not match or match.group(1) != sid):
             raise ValueError("Untrusted or mismatched source page")
+        pdf = r.get("pdf")
+        if pdf:
+            p = urlsplit(pdf)
+            if (p.scheme != "https" or p.netloc != "home.moe.gov.om"
+                    or not p.path.startswith("/images/manaheg/file/")
+                    or not p.path.lower().endswith(".pdf")
+                    or p.query or p.fragment or p.username or p.password):
+                raise ValueError("Untrusted curriculum PDF URL")
         status = r.get("status")
         if status not in counts:
             raise ValueError("Unknown status")
@@ -35,6 +43,12 @@ def audit(data):
             if not fid or fid in files:
                 raise ValueError("Duplicate/missing Drive file")
             files.add(fid)
+            folder_key = f.get("folder_key")
+            folder_map = data.get("folder_map")
+            if folder_map is not None and (
+                    not folder_key or folder_key not in folder_map
+                    or f.get("parent_id") != folder_map[folder_key]):
+                raise ValueError("Uploaded file folder does not match manifest")
             size = int(f.get("size") or 0)
             if size <= 0:
                 raise ValueError("Invalid file size")
@@ -73,6 +87,24 @@ class ManifestAuditTests(unittest.TestCase):
     def test_wrong_bytes(self):
         d = self.sample(); d["records"][0]["pdf_check"]["bytes"] = 1
         with self.assertRaises(ValueError): audit(d)
+    def test_reject_external_pdf(self):
+        d = self.sample()
+        d["records"][0]["pdf"] = "https://evil.example/images/manaheg/file/a.pdf"
+        with self.assertRaises(ValueError): audit(d)
+    def test_reject_pdf_query(self):
+        d = self.sample()
+        d["records"][0]["pdf"] = "https://home.moe.gov.om/images/manaheg/file/a.pdf?download=1"
+        with self.assertRaises(ValueError): audit(d)
+    def test_reject_folder_mismatch(self):
+        d = self.sample()
+        d["folder_map"] = {"2:2": "expected"}
+        d["records"][0]["drive_file"].update(folder_key="2:2", parent_id="wrong")
+        with self.assertRaises(ValueError): audit(d)
+    def test_valid_folder_mapping(self):
+        d = self.sample()
+        d["folder_map"] = {"2:2": "expected"}
+        d["records"][0]["drive_file"].update(folder_key="2:2", parent_id="expected")
+        self.assertEqual(audit(d)["drive_files"], 1)
     def test_summary(self):
         d = self.sample(); d["summary"]["bytes_uploaded"] = 0
         with self.assertRaises(ValueError): audit(d)
