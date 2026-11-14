@@ -11,7 +11,7 @@ def audit(data):
     if not isinstance(data.get("records"), list):
         raise ValueError("Missing records")
     ids, files, counts = set(), set(), {s: 0 for s in STATUSES}
-    total, incomplete = 0, []
+    total, incomplete, missing_sha256 = 0, [], []
     for r in data["records"]:
         sid = str(r.get("id", ""))
         if not re.fullmatch(r"[1-9]\d*", sid) or sid in ids:
@@ -37,9 +37,11 @@ def audit(data):
             raise ValueError("Unknown status")
         counts[status] += 1
         check = r.get("pdf_check") or {}
-        if "sha256" in check and not re.fullmatch(r"[a-f0-9]{64}", check["sha256"]):
+        if "sha256" in check and (not isinstance(check["sha256"], str) or not re.fullmatch(r"[a-f0-9]{64}", check["sha256"])):
             raise ValueError("Invalid SHA256")
         if status == "uploaded_verified":
+            if not check.get("sha256"):
+                missing_sha256.append(sid)
             f = r.get("drive_file") or {}
             fid = f.get("id")
             if not fid or fid in files:
@@ -66,7 +68,8 @@ def audit(data):
             or any(summary.get("status_counts", {}).get(s, 0) != n for s, n in counts.items())):
         raise ValueError("Summary mismatch")
     return {"sources": len(ids), "drive_files": len(files),
-            "bytes": total, "missing_pdf_checks": incomplete}
+            "bytes": total, "missing_pdf_checks": incomplete,
+            "missing_sha256": missing_sha256}
 
 class ManifestAuditTests(unittest.TestCase):
     def sample(self):
@@ -80,6 +83,14 @@ class ManifestAuditTests(unittest.TestCase):
     def test_missing_check_is_reported_not_invented(self):
         d = self.sample(); d["records"][0]["pdf_check"] = {}
         self.assertEqual(audit(d)["missing_pdf_checks"], ["12"])
+    def test_missing_sha256_is_reported_not_invented(self):
+        self.assertEqual(audit(self.sample())["missing_sha256"], ["12"])
+    def test_invalid_sha256_type_rejected(self):
+        d = self.sample(); d["records"][0]["pdf_check"]["sha256"] = 123
+        with self.assertRaises(ValueError): audit(d)
+    def test_valid_sha256_not_reported(self):
+        d = self.sample(); d["records"][0]["pdf_check"]["sha256"] = "a" * 64
+        self.assertEqual(audit(d)["missing_sha256"], [])
     def test_duplicate(self):
         d = self.sample(); d["records"].append(dict(d["records"][0]))
         with self.assertRaises(ValueError): audit(d)
