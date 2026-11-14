@@ -28,7 +28,9 @@ def audit(data):
             if (p.scheme != "https" or p.netloc != "home.moe.gov.om"
                     or not p.path.startswith("/images/manaheg/file/")
                     or not p.path.lower().endswith(".pdf")
-                    or p.query or p.fragment or p.username or p.password):
+                    or p.query or p.fragment or p.username or p.password
+                    or any(segment in (".", "..") for segment in p.path.split("/"))
+                    or "%" in p.path or "\\" in p.path):
                 raise ValueError("Untrusted curriculum PDF URL")
         status = r.get("status")
         if status not in counts:
@@ -94,6 +96,18 @@ class ManifestAuditTests(unittest.TestCase):
     def test_reject_pdf_query(self):
         d = self.sample()
         d["records"][0]["pdf"] = "https://home.moe.gov.om/images/manaheg/file/a.pdf?download=1"
+        with self.assertRaises(ValueError): audit(d)
+    def test_reject_pdf_parent_traversal(self):
+        d = self.sample()
+        d["records"][0]["pdf"] = "https://home.moe.gov.om/images/manaheg/file/../other.pdf"
+        with self.assertRaises(ValueError): audit(d)
+    def test_reject_pdf_encoded_traversal(self):
+        d = self.sample()
+        d["records"][0]["pdf"] = "https://home.moe.gov.om/images/manaheg/file/%2e%2e/other.pdf"
+        with self.assertRaises(ValueError): audit(d)
+    def test_reject_pdf_backslash(self):
+        d = self.sample()
+        d["records"][0]["pdf"] = "https://home.moe.gov.om/images/manaheg/file/..\\\\other.pdf"
         with self.assertRaises(ValueError): audit(d)
     def test_reject_folder_mismatch(self):
         d = self.sample()
