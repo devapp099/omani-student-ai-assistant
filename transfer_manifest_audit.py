@@ -114,7 +114,10 @@ def official_folder_key(crumbs):
         return None
     if term not in ("الفصل الأول", "الفصل الاول", "الفصل الثاني"):
         return None
-    return f"{grades.index(grade[len("الصف "):]) + 1}:{1 if term != 'الفصل الثاني' else 2}"
+    grade_name = grade[len("الصف "):]
+    grade_number = grades.index(grade_name) + 1
+    semester_number = 2 if term == "الفصل الثاني" else 1
+    return f"{grade_number}:{semester_number}"
 
 
 def retrieval_ready_ids(data):
@@ -179,6 +182,10 @@ class ManifestAuditTests(unittest.TestCase):
         self.assertEqual(retrieval_ready_ids(d), [])
         d["folder_map"] = {"7:2": "folder-7-2"}
         self.assertEqual(retrieval_ready_ids(d), ["12"])
+
+    def test_official_folder_key_grade_boundaries(self):
+        self.assertEqual(official_folder_key(["الصف الأول", "العلوم", "الفصل الأول"]), "1:1")
+        self.assertEqual(official_folder_key(["الصف الثاني عشر", "العلوم", "الفصل الثاني"]), "12:2")
 
     def test_retrieval_rejects_unknown_official_grade(self):
         d = self.sample()
