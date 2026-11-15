@@ -11,7 +11,7 @@ def audit(data):
     if not isinstance(data.get("records"), list):
         raise ValueError("Missing records")
     ids, files, counts = set(), set(), {s: 0 for s in STATUSES}
-    total, incomplete, missing_sha256 = 0, [], []
+    total, incomplete, missing_sha256, missing_pdf_url = 0, [], [], []
     for r in data["records"]:
         sid = str(r.get("id", ""))
         if not re.fullmatch(r"[1-9]\d*", sid) or sid in ids:
@@ -40,6 +40,8 @@ def audit(data):
         if "sha256" in check and (not isinstance(check["sha256"], str) or not re.fullmatch(r"[a-f0-9]{64}", check["sha256"])):
             raise ValueError("Invalid SHA256")
         if status == "uploaded_verified":
+            if not pdf:
+                missing_pdf_url.append(sid)
             if not check.get("sha256"):
                 missing_sha256.append(sid)
             f = r.get("drive_file") or {}
@@ -69,7 +71,8 @@ def audit(data):
         raise ValueError("Summary mismatch")
     return {"sources": len(ids), "drive_files": len(files),
             "bytes": total, "missing_pdf_checks": incomplete,
-            "missing_sha256": missing_sha256}
+            "missing_sha256": missing_sha256,
+            "missing_official_pdf_url": missing_pdf_url}
 
 class ManifestAuditTests(unittest.TestCase):
     def sample(self):
@@ -91,6 +94,12 @@ class ManifestAuditTests(unittest.TestCase):
     def test_valid_sha256_not_reported(self):
         d = self.sample(); d["records"][0]["pdf_check"]["sha256"] = "a" * 64
         self.assertEqual(audit(d)["missing_sha256"], [])
+    def test_missing_official_pdf_url_reported(self):
+        self.assertEqual(audit(self.sample())["missing_official_pdf_url"], ["12"])
+    def test_official_pdf_url_present(self):
+        d = self.sample()
+        d["records"][0]["pdf"] = "https://home.moe.gov.om/images/manaheg/file/a.pdf"
+        self.assertEqual(audit(d)["missing_official_pdf_url"], [])
     def test_duplicate(self):
         d = self.sample(); d["records"].append(dict(d["records"][0]))
         with self.assertRaises(ValueError): audit(d)
