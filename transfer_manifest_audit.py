@@ -80,6 +80,20 @@ def audit(data):
             "missing_sha256": missing_sha256,
             "missing_official_pdf_url": missing_pdf_url}
 
+
+def retrieval_ready_ids(data):
+    """Fail closed: return only verified, complete, officially sourced PDF IDs.
+
+    A catalog entry or pending download must never become retrievable by itself.
+    """
+    audit(data)
+    return [str(r["id"]) for r in data["records"]
+            if r["status"] == "uploaded_verified"
+            and r.get("pdf")
+            and (r.get("pdf_check") or {}).get("sha256")
+            and (r.get("pdf_check") or {}).get("pages")
+            and (r.get("pdf_check") or {}).get("bytes")]
+
 class ManifestAuditTests(unittest.TestCase):
     def sample(self):
         return {"records": [{"id": "12", "page": "https://home.moe.gov.om/ar/manaheg/1/show/12",
@@ -87,6 +101,27 @@ class ManifestAuditTests(unittest.TestCase):
                 "pdf_check": {"bytes": 123, "pages": 1}}],
                 "summary": {"catalog_pages": 1, "uploaded_verified": 1,
                 "bytes_uploaded": 123, "status_counts": {"uploaded_verified": 1}}}
+
+    def test_retrieval_denies_unverified_and_missing_provenance(self):
+        d = self.sample()
+        self.assertEqual(retrieval_ready_ids(d), [])
+        d["records"][0]["pdf"] = "https://home.moe.gov.om/images/manaheg/file/a.pdf"
+        self.assertEqual(retrieval_ready_ids(d), [])
+        d["records"][0]["pdf_check"]["sha256"] = "a" * 64
+        self.assertEqual(retrieval_ready_ids(d), ["12"])
+        d["records"][0]["status"] = "pending"
+        d["records"][0]["drive_file"] = None
+        d["summary"]["uploaded_verified"] = 0
+        d["summary"]["bytes_uploaded"] = 0
+        d["summary"]["status_counts"] = {"pending": 1}
+        self.assertEqual(retrieval_ready_ids(d), [])
+
+    def test_retrieval_rejects_untrusted_pdf(self):
+        d = self.sample()
+        d["records"][0]["pdf"] = "https://evil.example/a.pdf"
+        with self.assertRaises(ValueError):
+            retrieval_ready_ids(d)
+
     def test_valid(self):
         self.assertEqual(audit(self.sample())["drive_files"], 1)
     def test_missing_check_is_reported_not_invented(self):
