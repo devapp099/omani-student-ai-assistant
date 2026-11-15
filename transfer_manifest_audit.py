@@ -114,7 +114,7 @@ def official_folder_key(crumbs):
         return None
     if term not in ("الفصل الأول", "الفصل الاول", "الفصل الثاني"):
         return None
-    return f"{grades.index(grade[4:]) + 1}:{1 if term != 'الفصل الثاني' else 2}"
+    return f"{grades.index(grade[len("الصف "):]) + 1}:{1 if term != 'الفصل الثاني' else 2}"
 
 
 def retrieval_ready_ids(data):
