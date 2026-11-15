@@ -12,6 +12,7 @@ def audit(data):
         raise ValueError("Missing records")
     ids, files, hashes, counts = set(), set(), set(), {s: 0 for s in STATUSES}
     total, incomplete, missing_sha256, missing_pdf_url = 0, [], [], []
+    missing_classification = []
     for r in data["records"]:
         sid = str(r.get("id", ""))
         if not re.fullmatch(r"[1-9]\d*", sid) or sid in ids:
@@ -75,6 +76,8 @@ def audit(data):
                     expected_key = f"{expected_grade}:{expected_term}"
                     if f.get("folder_key") != expected_key:
                         raise ValueError("Uploaded folder contradicts official breadcrumbs")
+            if official_folder_key(r.get("crumbs")) is None:
+                missing_classification.append(sid)
             folder_key = f.get("folder_key")
             folder_map = data.get("folder_map")
             if folder_map is not None and (
@@ -98,7 +101,8 @@ def audit(data):
     return {"sources": len(ids), "drive_files": len(files),
             "bytes": total, "missing_pdf_checks": incomplete,
             "missing_sha256": missing_sha256,
-            "missing_official_pdf_url": missing_pdf_url}
+            "missing_official_pdf_url": missing_pdf_url,
+            "missing_official_classification": missing_classification}
 
 
 def official_folder_key(crumbs):
@@ -147,6 +151,12 @@ class ManifestAuditTests(unittest.TestCase):
                 "pdf_check": {"bytes": 123, "pages": 1}}],
                 "summary": {"catalog_pages": 1, "uploaded_verified": 1,
                 "bytes_uploaded": 123, "status_counts": {"uploaded_verified": 1}}}
+
+    def test_audit_reports_missing_official_classification(self):
+        d = self.sample()
+        self.assertEqual(audit(d)["missing_official_classification"], ["12"])
+        d["records"][0]["crumbs"] = ["الصف السادس", "العلوم", "الفصل الأول"]
+        self.assertEqual(audit(d)["missing_official_classification"], [])
 
     def test_retrieval_denies_unverified_and_missing_provenance(self):
         d = self.sample()
