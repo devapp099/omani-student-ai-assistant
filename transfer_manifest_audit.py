@@ -53,6 +53,8 @@ def audit(data):
             if not fid or fid in files:
                 raise ValueError("Duplicate/missing Drive file")
             files.add(fid)
+            if f.get("mime_type") != "application/pdf" or not str(f.get("title", "")).lower().endswith(".pdf"):
+                raise ValueError("Uploaded file must be a PDF")
             folder_key = f.get("folder_key")
             folder_map = data.get("folder_map")
             if folder_map is not None and (
@@ -81,7 +83,7 @@ def audit(data):
 class ManifestAuditTests(unittest.TestCase):
     def sample(self):
         return {"records": [{"id": "12", "page": "https://home.moe.gov.om/ar/manaheg/1/show/12",
-                "status": "uploaded_verified", "drive_file": {"id": "f", "size": "123"},
+                "status": "uploaded_verified", "drive_file": {"id": "f", "size": "123", "mime_type": "application/pdf", "title": "sample.pdf"},
                 "pdf_check": {"bytes": 123, "pages": 1}}],
                 "summary": {"catalog_pages": 1, "uploaded_verified": 1,
                 "bytes_uploaded": 123, "status_counts": {"uploaded_verified": 1}}}
@@ -104,6 +106,15 @@ class ManifestAuditTests(unittest.TestCase):
         d = self.sample()
         d["records"][0]["pdf"] = "https://home.moe.gov.om/images/manaheg/file/a.pdf"
         self.assertEqual(audit(d)["missing_official_pdf_url"], [])
+    def test_reject_uploaded_non_pdf_mime(self):
+        d = self.sample(); d["records"][0]["drive_file"]["mime_type"] = "text/plain"
+        with self.assertRaisesRegex(ValueError, "Uploaded file must be a PDF"): audit(d)
+    def test_reject_uploaded_non_pdf_filename(self):
+        d = self.sample(); d["records"][0]["drive_file"]["title"] = "sample.txt"
+        with self.assertRaisesRegex(ValueError, "Uploaded file must be a PDF"): audit(d)
+    def test_accept_pdf_case_insensitive_extension(self):
+        d = self.sample(); d["records"][0]["drive_file"]["title"] = "sample.PDF"
+        self.assertEqual(audit(d)["drive_files"], 1)
     def test_duplicate_uploaded_pdf_hash_rejected(self):
         d = self.sample()
         first = d["records"][0]
