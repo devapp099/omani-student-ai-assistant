@@ -10,7 +10,7 @@ STATUSES = ("pending", "source_error", "excluded_wrong_source", "uploaded_verifi
 def audit(data):
     if not isinstance(data.get("records"), list):
         raise ValueError("Missing records")
-    ids, files, counts = set(), set(), {s: 0 for s in STATUSES}
+    ids, files, hashes, counts = set(), set(), set(), {s: 0 for s in STATUSES}
     total, incomplete, missing_sha256, missing_pdf_url = 0, [], [], []
     for r in data["records"]:
         sid = str(r.get("id", ""))
@@ -44,6 +44,10 @@ def audit(data):
                 missing_pdf_url.append(sid)
             if not check.get("sha256"):
                 missing_sha256.append(sid)
+            elif check["sha256"] in hashes:
+                raise ValueError("Duplicate uploaded PDF SHA256")
+            else:
+                hashes.add(check["sha256"])
             f = r.get("drive_file") or {}
             fid = f.get("id")
             if not fid or fid in files:
@@ -100,6 +104,36 @@ class ManifestAuditTests(unittest.TestCase):
         d = self.sample()
         d["records"][0]["pdf"] = "https://home.moe.gov.om/images/manaheg/file/a.pdf"
         self.assertEqual(audit(d)["missing_official_pdf_url"], [])
+    def test_duplicate_uploaded_pdf_hash_rejected(self):
+        d = self.sample()
+        first = d["records"][0]
+        first["pdf_check"]["sha256"] = "a" * 64
+        second = json.loads(json.dumps(first))
+        second["id"] = "13"
+        second["page"] = "https://home.moe.gov.om/ar/manaheg/1/show/13"
+        second["drive_file"]["id"] = "different-file"
+        d["records"].append(second)
+        d["summary"]["catalog_pages"] = 2
+        d["summary"]["uploaded_verified"] = 2
+        d["summary"]["bytes_uploaded"] = 246
+        d["summary"]["status_counts"]["uploaded_verified"] = 2
+        with self.assertRaisesRegex(ValueError, "Duplicate uploaded PDF SHA256"):
+            audit(d)
+    def test_different_uploaded_pdf_hashes_allowed(self):
+        d = self.sample()
+        first = d["records"][0]
+        first["pdf_check"]["sha256"] = "a" * 64
+        second = json.loads(json.dumps(first))
+        second["id"] = "13"
+        second["page"] = "https://home.moe.gov.om/ar/manaheg/1/show/13"
+        second["drive_file"]["id"] = "different-file"
+        second["pdf_check"]["sha256"] = "b" * 64
+        d["records"].append(second)
+        d["summary"]["catalog_pages"] = 2
+        d["summary"]["uploaded_verified"] = 2
+        d["summary"]["bytes_uploaded"] = 246
+        d["summary"]["status_counts"]["uploaded_verified"] = 2
+        self.assertEqual(audit(d)["drive_files"], 2)
     def test_duplicate(self):
         d = self.sample(); d["records"].append(dict(d["records"][0]))
         with self.assertRaises(ValueError): audit(d)
