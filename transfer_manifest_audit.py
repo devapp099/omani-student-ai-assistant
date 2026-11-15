@@ -55,6 +55,26 @@ def audit(data):
             files.add(fid)
             if f.get("mime_type") != "application/pdf" or not str(f.get("title", "")).lower().endswith(".pdf"):
                 raise ValueError("Uploaded file must be a PDF")
+            # Do not silently route an uploaded book to a grade/term that
+            # contradicts the official page breadcrumbs. Missing breadcrumbs
+            # remain an evidence gap rather than a guessed classification.
+            crumbs = r.get("crumbs") or []
+            if crumbs and not isinstance(crumbs, list):
+                raise ValueError("Invalid source breadcrumbs")
+            if len(crumbs) >= 3:
+                grades = ("الأول", "الثاني", "الثالث", "الرابع", "الخامس",
+                          "السادس", "السابع", "الثامن", "التاسع", "العاشر",
+                          "الحادي عشر", "الثاني عشر")
+                grade_text = str(crumbs[0]).strip()
+                term_text = str(crumbs[-1]).strip()
+                expected_grade = next((i for i, name in enumerate(grades, 1)
+                                       if grade_text == "الصف " + name), None)
+                expected_term = (1 if term_text in ("الفصل الأول", "الفصل الاول")
+                                 else 2 if term_text == "الفصل الثاني" else None)
+                if expected_grade is not None and expected_term is not None:
+                    expected_key = f"{expected_grade}:{expected_term}"
+                    if f.get("folder_key") != expected_key:
+                        raise ValueError("Uploaded folder contradicts official breadcrumbs")
             folder_key = f.get("folder_key")
             folder_map = data.get("folder_map")
             if folder_map is not None and (
@@ -214,6 +234,19 @@ class ManifestAuditTests(unittest.TestCase):
         d["folder_map"] = {"2:2": "expected"}
         d["records"][0]["drive_file"].update(folder_key="2:2", parent_id="wrong")
         with self.assertRaises(ValueError): audit(d)
+    def test_reject_folder_contradicting_official_breadcrumbs(self):
+        d = self.sample()
+        d["records"][0]["crumbs"] = ["الصف السابع", "العلوم", "الفصل الثاني"]
+        d["records"][0]["drive_file"]["folder_key"] = "7:1"
+        with self.assertRaisesRegex(ValueError, "contradicts official breadcrumbs"):
+            audit(d)
+
+    def test_accept_folder_matching_official_breadcrumbs(self):
+        d = self.sample()
+        d["records"][0]["crumbs"] = ["الصف السابع", "العلوم", "الفصل الثاني"]
+        d["records"][0]["drive_file"]["folder_key"] = "7:2"
+        self.assertEqual(audit(d)["drive_files"], 1)
+
     def test_valid_folder_mapping(self):
         d = self.sample()
         d["folder_map"] = {"2:2": "expected"}
