@@ -10,7 +10,7 @@ STATUSES = ("pending", "source_error", "excluded_wrong_source", "uploaded_verifi
 def audit(data):
     if not isinstance(data.get("records"), list):
         raise ValueError("Missing records")
-    ids, files, hashes, counts = set(), set(), set(), {s: 0 for s in STATUSES}
+    ids, files, hashes, verified_urls, counts = set(), set(), set(), set(), {s: 0 for s in STATUSES}
     total, incomplete, missing_sha256, missing_pdf_url = 0, [], [], []
     missing_classification = []
     for r in data["records"]:
@@ -41,6 +41,10 @@ def audit(data):
         if "sha256" in check and (not isinstance(check["sha256"], str) or not re.fullmatch(r"[a-f0-9]{64}", check["sha256"])):
             raise ValueError("Invalid SHA256")
         if status == "uploaded_verified":
+            if pdf and pdf in verified_urls:
+                raise ValueError("Duplicate uploaded PDF source URL")
+            if pdf:
+                verified_urls.add(pdf)
             if not pdf:
                 missing_pdf_url.append(sid)
             if not check.get("sha256"):
@@ -271,6 +275,22 @@ class ManifestAuditTests(unittest.TestCase):
         d["summary"]["status_counts"]["uploaded_verified"] = 2
         with self.assertRaisesRegex(ValueError, "Duplicate uploaded PDF SHA256"):
             audit(d)
+    def test_duplicate_uploaded_pdf_url_rejected_even_with_different_hashes(self):
+        d = self.sample()
+        first = d["records"][0]
+        first["pdf"] = "https://home.moe.gov.om/images/manaheg/file/a.pdf"
+        first["pdf_check"]["sha256"] = "a" * 64
+        second = json.loads(json.dumps(first))
+        second["id"] = "13"
+        second["page"] = "https://home.moe.gov.om/ar/manaheg/1/show/13"
+        second["drive_file"]["id"] = "different-file"
+        second["pdf_check"]["sha256"] = "b" * 64
+        d["records"].append(second)
+        d["summary"].update(catalog_pages=2, uploaded_verified=2, bytes_uploaded=246)
+        d["summary"]["status_counts"]["uploaded_verified"] = 2
+        with self.assertRaisesRegex(ValueError, "Duplicate uploaded PDF source URL"):
+            audit(d)
+
     def test_different_uploaded_pdf_hashes_allowed(self):
         d = self.sample()
         first = d["records"][0]
