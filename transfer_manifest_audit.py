@@ -101,6 +101,22 @@ def audit(data):
             "missing_official_pdf_url": missing_pdf_url}
 
 
+def official_folder_key(crumbs):
+    """Only explicit, recognized official grade and semester qualify."""
+    grades = ("الأول", "الثاني", "الثالث", "الرابع", "الخامس",
+              "السادس", "السابع", "الثامن", "التاسع", "العاشر",
+              "الحادي عشر", "الثاني عشر")
+    if not isinstance(crumbs, list) or len(crumbs) < 3:
+        return None
+    grade = str(crumbs[0]).strip()
+    term = str(crumbs[-1]).strip()
+    if grade not in ("الصف " + name for name in grades):
+        return None
+    if term not in ("الفصل الأول", "الفصل الاول", "الفصل الثاني"):
+        return None
+    return f"{grades.index(grade[4:]) + 1}:{1 if term != 'الفصل الثاني' else 2}"
+
+
 def retrieval_ready_ids(data):
     """Fail closed: return only verified, complete, officially sourced PDF IDs.
 
@@ -113,7 +129,8 @@ def retrieval_ready_ids(data):
             and (r.get("pdf_check") or {}).get("sha256")
             and (r.get("pdf_check") or {}).get("pages")
             and (r.get("pdf_check") or {}).get("bytes")
-            and len(r.get("crumbs") or []) >= 3
+            and official_folder_key(r.get("crumbs")) is not None
+            and (r.get("drive_file") or {}).get("folder_key") == official_folder_key(r.get("crumbs"))
             and (r.get("drive_file") or {}).get("folder_key")
             and (r.get("drive_file") or {}).get("parent_id")
             and (r.get("drive_file") or {}).get("folder_key") in (data.get("folder_map") or {})
@@ -162,6 +179,37 @@ class ManifestAuditTests(unittest.TestCase):
         self.assertEqual(retrieval_ready_ids(d), [])
         d["folder_map"] = {"7:2": "folder-7-2"}
         self.assertEqual(retrieval_ready_ids(d), ["12"])
+
+    def test_retrieval_rejects_unknown_official_grade(self):
+        d = self.sample()
+        r = d["records"][0]
+        r["pdf"] = "https://home.moe.gov.om/images/manaheg/file/a.pdf"
+        r["pdf_check"]["sha256"] = "a" * 64
+        r["crumbs"] = ["الصف غير معروف", "العلوم", "الفصل الثاني"]
+        r["drive_file"].update(folder_key="7:2", parent_id="folder")
+        d["folder_map"] = {"7:2": "folder"}
+        self.assertEqual(retrieval_ready_ids(d), [])
+
+    def test_retrieval_rejects_unknown_official_semester(self):
+        d = self.sample()
+        r = d["records"][0]
+        r["pdf"] = "https://home.moe.gov.om/images/manaheg/file/a.pdf"
+        r["pdf_check"]["sha256"] = "a" * 64
+        r["crumbs"] = ["الصف السابع", "العلوم", "الفصل الثالث"]
+        r["drive_file"].update(folder_key="7:2", parent_id="folder")
+        d["folder_map"] = {"7:2": "folder"}
+        self.assertEqual(retrieval_ready_ids(d), [])
+
+    def test_retrieval_rejects_wrong_folder_even_if_mapped(self):
+        d = self.sample()
+        r = d["records"][0]
+        r["pdf"] = "https://home.moe.gov.om/images/manaheg/file/a.pdf"
+        r["pdf_check"]["sha256"] = "a" * 64
+        r["crumbs"] = ["الصف السابع", "العلوم", "الفصل الثاني"]
+        r["drive_file"].update(folder_key="6:2", parent_id="folder")
+        d["folder_map"] = {"6:2": "folder"}
+        with self.assertRaisesRegex(ValueError, "contradicts official breadcrumbs"):
+            retrieval_ready_ids(d)
 
     def test_valid(self):
         self.assertEqual(audit(self.sample())["drive_files"], 1)
