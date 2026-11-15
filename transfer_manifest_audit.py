@@ -112,7 +112,13 @@ def retrieval_ready_ids(data):
             and r.get("pdf")
             and (r.get("pdf_check") or {}).get("sha256")
             and (r.get("pdf_check") or {}).get("pages")
-            and (r.get("pdf_check") or {}).get("bytes")]
+            and (r.get("pdf_check") or {}).get("bytes")
+            and len(r.get("crumbs") or []) >= 3
+            and (r.get("drive_file") or {}).get("folder_key")
+            and (r.get("drive_file") or {}).get("parent_id")
+            and (r.get("drive_file") or {}).get("folder_key") in (data.get("folder_map") or {})
+            and (r.get("drive_file") or {}).get("parent_id") ==
+                data["folder_map"][(r.get("drive_file") or {})["folder_key"]]]
 
 class ManifestAuditTests(unittest.TestCase):
     def sample(self):
@@ -128,6 +134,9 @@ class ManifestAuditTests(unittest.TestCase):
         d["records"][0]["pdf"] = "https://home.moe.gov.om/images/manaheg/file/a.pdf"
         self.assertEqual(retrieval_ready_ids(d), [])
         d["records"][0]["pdf_check"]["sha256"] = "a" * 64
+        d["records"][0]["crumbs"] = ["الصف السابع", "العلوم", "الفصل الثاني"]
+        d["records"][0]["drive_file"].update(folder_key="7:2", parent_id="folder-7-2")
+        d["folder_map"] = {"7:2": "folder-7-2"}
         self.assertEqual(retrieval_ready_ids(d), ["12"])
         d["records"][0]["status"] = "pending"
         d["records"][0]["drive_file"] = None
@@ -141,6 +150,18 @@ class ManifestAuditTests(unittest.TestCase):
         d["records"][0]["pdf"] = "https://evil.example/a.pdf"
         with self.assertRaises(ValueError):
             retrieval_ready_ids(d)
+
+    def test_retrieval_requires_official_classification_and_drive_folder(self):
+        d = self.sample()
+        r = d["records"][0]
+        r["pdf"] = "https://home.moe.gov.om/images/manaheg/file/a.pdf"
+        r["pdf_check"]["sha256"] = "a" * 64
+        self.assertEqual(retrieval_ready_ids(d), [])
+        r["crumbs"] = ["الصف السابع", "العلوم", "الفصل الثاني"]
+        r["drive_file"].update(folder_key="7:2", parent_id="folder-7-2")
+        self.assertEqual(retrieval_ready_ids(d), [])
+        d["folder_map"] = {"7:2": "folder-7-2"}
+        self.assertEqual(retrieval_ready_ids(d), ["12"])
 
     def test_valid(self):
         self.assertEqual(audit(self.sample())["drive_files"], 1)
