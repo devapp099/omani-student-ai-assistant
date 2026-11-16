@@ -14,6 +14,8 @@ SHA256 = re.compile(r"[0-9a-fA-F]{64}\Z")
 def evidence_report(manifest):
     gaps = []
     verified = 0
+    seen_drive_ids = {}
+    seen_hashes = {}
     for record in manifest.get("records", []):
         if record.get("status") != "uploaded_verified":
             continue
@@ -21,14 +23,27 @@ def evidence_report(manifest):
         check = record.get("pdf_check") or {}
         drive = record.get("drive_file") or {}
         missing = []
+        source_id = str(record.get('id', ''))
         if type(check.get("bytes")) is not int or check["bytes"] <= 0:
             missing.append("pdf_bytes")
         if type(check.get("pages")) is not int or check["pages"] <= 0:
             missing.append("pdf_pages")
         if not isinstance(check.get("sha256"), str) or not SHA256.fullmatch(check["sha256"]):
             missing.append("sha256")
-        if not drive.get("id"):
+        digest = check.get("sha256")
+        if isinstance(digest, str) and SHA256.fullmatch(digest):
+            digest = digest.lower()
+            if digest in seen_hashes:
+                missing.append("duplicate_pdf_sha256_with_source_" + seen_hashes[digest])
+            else:
+                seen_hashes[digest] = source_id
+        drive_id = drive.get("id")
+        if not drive_id:
             missing.append("drive_file_id")
+        elif drive_id in seen_drive_ids:
+            missing.append("duplicate_drive_file_id_with_source_" + seen_drive_ids[drive_id])
+        else:
+            seen_drive_ids[drive_id] = source_id
         if not drive.get("parent_id"):
             missing.append("drive_parent_id")
         try:
