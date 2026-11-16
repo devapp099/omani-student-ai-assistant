@@ -34,6 +34,18 @@ def safe_pdf(url):
         return False
 
 
+def safe_source_page(url, source_id):
+    if not isinstance(url, str):
+        return False
+    try:
+        u = urlsplit(url)
+        return (u.scheme == 'https' and u.netloc == 'home.moe.gov.om'
+                and not (u.query or u.fragment or u.username or u.password)
+                and re.fullmatch(r'/ar/manaheg/[1-9]\\d*/show/' + re.escape(str(source_id)), u.path) is not None)
+    except ValueError:
+        return False
+
+
 def preflight(manifest):
     """Return metadata-only review candidates; never marks a book verified."""
     records = manifest['records']
@@ -58,7 +70,9 @@ def preflight(manifest):
             continue
         url = r.get('pdf')
         key = official_key(r.get('crumbs'))
-        if not safe_pdf(url):
+        if not safe_source_page(r.get('page'), r['id']):
+            blocked['invalid_official_source_page'] += 1
+        elif not safe_pdf(url):
             blocked['invalid_official_pdf_url'] += 1
         elif url in used_urls or url in seen_pending_urls:
             blocked['duplicate_pdf_url'] += 1
