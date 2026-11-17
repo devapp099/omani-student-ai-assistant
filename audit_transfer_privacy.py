@@ -23,11 +23,13 @@ def audit(manifest):
             permissions = drive.get('permissions')
             if permissions is not None and not isinstance(permissions, list):
                 issues.append('invalid_permission_metadata')
-            elif isinstance(permissions, list) and any(
-                isinstance(p, dict) and p.get('type') in ('anyone', 'domain')
-                for p in permissions
-            ):
-                issues.append('broad_permission_detected')
+            elif isinstance(permissions, list):
+                if any(not isinstance(p, dict) or not isinstance(p.get('type'), str) or not p['type']
+                       for p in permissions):
+                    issues.append('invalid_permission_metadata')
+                if any(isinstance(p, dict) and p.get('type') in ('anyone', 'domain')
+                       for p in permissions):
+                    issues.append('broad_permission_detected')
             if visibility == 'permission_metadata_available' and permissions is None:
                 issues.append('permission_list_missing')
         if issues:
@@ -59,6 +61,16 @@ class PrivacyTests(unittest.TestCase):
 
     def test_missing_permission_list_when_claimed_available(self):
         self.assertIn('permission_list_missing', audit(self.record({'source_visibility_status': 'permission_metadata_available'}))['findings'][0]['issues'])
+
+
+    def test_malformed_permission_entry_fails_closed(self):
+        result = audit(self.record({'source_visibility_status': 'permission_metadata_available', 'permissions': [None, {'role': 'reader'}]}))
+        self.assertIn('invalid_permission_metadata', result['findings'][0]['issues'])
+
+    def test_broad_permission_detected_alongside_malformed_entry(self):
+        result = audit(self.record({'source_visibility_status': 'permission_metadata_available', 'permissions': ['broken', {'type': 'anyone'}]}))
+        self.assertIn('invalid_permission_metadata', result['findings'][0]['issues'])
+        self.assertIn('broad_permission_detected', result['findings'][0]['issues'])
 
 
 if __name__ == '__main__':
