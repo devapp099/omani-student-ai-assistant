@@ -10,21 +10,26 @@ def audit(manifest):
     for record in manifest.get('records', []):
         if record.get('status') != 'uploaded_verified':
             continue
-        drive = record.get('drive_file') or {}
+        drive = record.get('drive_file')
         issues = []
         if not isinstance(drive, dict):
             issues.append('invalid_drive_metadata')
         else:
             if drive.get('shared') is True:
                 issues.append('shared_file_requires_permission_review')
-            if drive.get('source_visibility_status') == 'access_not_verified':
+            visibility = drive.get('source_visibility_status')
+            if visibility not in ('not_shared', 'permission_metadata_available'):
                 issues.append('visibility_not_verified')
-            permissions = drive.get('permissions') or []
-            if isinstance(permissions, list) and any(
+            permissions = drive.get('permissions')
+            if permissions is not None and not isinstance(permissions, list):
+                issues.append('invalid_permission_metadata')
+            elif isinstance(permissions, list) and any(
                 isinstance(p, dict) and p.get('type') in ('anyone', 'domain')
                 for p in permissions
             ):
                 issues.append('broad_permission_detected')
+            if visibility == 'permission_metadata_available' and permissions is None:
+                issues.append('permission_list_missing')
         if issues:
             findings.append({'source_id': str(record.get('id', '')), 'issues': issues})
     return {'findings': findings, 'requires_live_drive_permission_check': True}
@@ -45,6 +50,15 @@ class PrivacyTests(unittest.TestCase):
 
     def test_unverified(self):
         self.assertIn('visibility_not_verified', audit(self.record({'source_visibility_status': 'access_not_verified'}))['findings'][0]['issues'])
+
+    def test_missing_visibility_fails_closed(self):
+        self.assertIn('visibility_not_verified', audit(self.record({}))['findings'][0]['issues'])
+
+    def test_invalid_permission_shape(self):
+        self.assertIn('invalid_permission_metadata', audit(self.record({'source_visibility_status': 'not_shared', 'permissions': 'anyone'}))['findings'][0]['issues'])
+
+    def test_missing_permission_list_when_claimed_available(self):
+        self.assertIn('permission_list_missing', audit(self.record({'source_visibility_status': 'permission_metadata_available'}))['findings'][0]['issues'])
 
 
 if __name__ == '__main__':
